@@ -44,11 +44,6 @@ export async function openFloatingWidget({ getContent }) {
 
   const startBtn = pipWindow.document.getElementById('fwStartBtn');
   const stopBtn = pipWindow.document.getElementById('fwStopBtn');
-  // window.classBell은 js/bell.js가 노출하는 최소 창구다(같은 window를 공유
-  // 하므로 여기서도 그대로 호출된다). 혹시 bell.js가 아직 로드되기 전이면
-  // 버튼을 눌러도 조용히 아무 일도 안 하도록 존재 여부만 확인한다.
-  startBtn.addEventListener('click', () => window.classBell && window.classBell.start());
-  stopBtn.addEventListener('click', () => window.classBell && window.classBell.stop());
 
   const update = () => {
     const content = getContent();
@@ -61,6 +56,20 @@ export async function openFloatingWidget({ getContent }) {
     startBtn.disabled = running;
     stopBtn.disabled = !running;
   };
+
+  // window.classBell은 js/bell.js가 노출하는 최소 창구다(같은 window를 공유
+  // 하므로 여기서도 그대로 호출된다). 혹시 bell.js가 아직 로드되기 전이면
+  // 버튼을 눌러도 조용히 아무 일도 안 하도록 존재 여부만 확인한다. 클릭 직후
+  // update()도 바로 불러줘야 disabled 상태가 다음 1초 tick까지 안 밀린다.
+  startBtn.addEventListener('click', () => {
+    if (window.classBell) window.classBell.start();
+    update();
+  });
+  stopBtn.addEventListener('click', () => {
+    if (window.classBell) window.classBell.stop();
+    update();
+  });
+
   update();
   const intervalId = setInterval(update, 1000);
 

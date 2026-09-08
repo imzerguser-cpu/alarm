@@ -20,7 +20,10 @@
 /* 왼쪽 30% 학생 / 가운데 40% 수업 알리미·알림장 / 오른쪽 30% 시간표 */
 .three-col-row {
   display: grid;
-  grid-template-columns: 30% 40% 30%;
+  /* %가 아니라 fr을 쓴다 — %는 grid gap을 빼지 않고 계산돼 30%+40%+30%+gap
+     만큼 컨테이너 폭을 넘어간다. fr은 gap을 먼저 뺀 나머지를 3:4:3으로 나눠
+     정확히 30/40/30 비율이 되면서도 넘치지 않는다. */
+  grid-template-columns: 3fr 4fr 3fr;
   gap: 16px;
   align-items: start;
 }
@@ -129,7 +132,8 @@
 
 body.edit-mode .notice-general,
 body.edit-mode .s-role,
-body.edit-mode .s-todo {
+body.edit-mode .s-todo,
+body.edit-mode .s-submit {
   outline: 1px dashed #ffcc00;
 }
 /* 배너는 노란 바탕이라 노란 점선이 보이지 않으므로 어두운 점선을 쓴다.
@@ -165,17 +169,18 @@ body.edit-mode .timetable-edit-form { display: flex; }
 /* 좁은 화면(교실 태블릿)에서는 편집모드가 아니면 연결 끊김 경고를 숨긴다 —
    학생들이 보는 화면에 굳이 경고를 띄울 필요는 없고, 교사가 편집모드로
    들어가거나 PC(넓은 화면)로 열었을 때만 보이면 충분하다. */
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   .conn-status { display: none; }
   body.edit-mode .conn-status:not([hidden]) { display: block; }
 }
 
-.student-add-form { display: none; margin-top: 10px; gap: 8px; }
+.student-add-form { display: none; margin-top: 10px; gap: 8px; flex-wrap: wrap; }
 body.edit-mode .student-add-form { display: flex; }
-.student-add-form input { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #3a4864;
+.student-add-form input {
+  flex: 1; min-width: 0; padding: 8px; border-radius: 8px; border: 1px solid #3a4864;
   background: #0e1420; color: #fff;
 }
-.student-add-form input[type="number"] { flex: 0 0 90px; }
+.student-add-form input[type="number"] { flex: 0 0 70px; }
 .student-add-form button {
   padding: 8px 14px; border-radius: 8px; border: none; background: #34495e;
   color: #fff; font-weight: bold; cursor: pointer;

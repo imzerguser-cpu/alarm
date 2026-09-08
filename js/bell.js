@@ -30,9 +30,9 @@
   const alarmBannerCloseBtn = document.getElementById('alarmBannerCloseBtn');
 
   let schedule = loadSchedule();
-  // 시작/중지 버튼은 관리자 모드에서만 보이는데, 상태를 기억해두지 않으면
-  // 새로고침·태블릿 재부팅마다 알리미가 꺼진 채로 돌아오고 아무도(학생도
-  // 교사도) 그 사실을 알 방법이 없다. localStorage에 기억해뒀다가 그대로 이어간다.
+  // 상태를 기억해두지 않으면 새로고침·태블릿 재부팅마다 알리미가 꺼진 채로
+  // 돌아온다. localStorage에 기억해뒀다가 그대로 이어간다(시작/중지 버튼 자체는
+  // 이제 항상 보이지만, 그래도 매번 다시 누르게 하고 싶지는 않다).
   let running = false;
   try {
     running = localStorage.getItem(RUNNING_KEY) === 'true';
