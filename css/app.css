@@ -96,3 +96,8 @@
     grid-template-areas: "clock" "banner" "timetable" "center";
   }
 }
+
+body.edit-mode .notice-general,
+body.edit-mode .s-todo {
+  outline: 1px dashed #ffcc00;
+}
