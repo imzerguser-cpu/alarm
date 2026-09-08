@@ -101,3 +101,18 @@ body.edit-mode .notice-general,
 body.edit-mode .s-todo {
   outline: 1px dashed #ffcc00;
 }
+
+.timetable-edit-form {
+  grid-area: timetable; margin-top: 10px; background: #1a2233; border-radius: 14px;
+  padding: 14px; display: flex; flex-direction: column; gap: 8px;
+}
+.timetable-edit-form[hidden] { display: none; }
+.timetable-edit-form label { display: flex; flex-direction: column; font-size: 0.85rem; color: #9aa7bd; gap: 4px; }
+.timetable-edit-form select, .timetable-edit-form input[type="text"] {
+  padding: 8px; border-radius: 8px; border: 1px solid #3a4864; background: #0e1420; color: #fff;
+}
+.timetable-edit-form button {
+  padding: 10px; border-radius: 8px; border: none; background: #ffcc00; color: #111;
+  font-weight: bold; cursor: pointer;
+}
+body.edit-mode .timetable-edit-form { display: flex; }
