@@ -103,7 +103,7 @@ body.edit-mode .s-todo {
 }
 
 .timetable-edit-form {
-  grid-area: timetable; margin-top: 10px; background: #1a2233; border-radius: 14px;
+  grid-column: 2; margin-top: 10px; background: #1a2233; border-radius: 14px;
   padding: 14px; display: flex; flex-direction: column; gap: 8px;
 }
 .timetable-edit-form[hidden] { display: none; }
