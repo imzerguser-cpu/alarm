@@ -163,3 +163,18 @@ document.getElementById('studentAddBtn').addEventListener('click', () => {
   saveRoster(next);
   input.value = '';
 });
+
+import { wireExcelInput } from './excel-import.js';
+
+wireExcelInput({
+  buttonEl: document.getElementById('excelUploadBtn'),
+  fileInputEl: document.getElementById('excelFileInput'),
+  onParsed: (list) => {
+    // 기존 1인1역(role) 값은 이름이 같으면 유지
+    const merged = list.map((s) => {
+      const prev = roster.find((r) => r.name === s.name);
+      return prev ? { ...s, role: prev.role } : s;
+    });
+    saveRoster(merged);
+  },
+});
