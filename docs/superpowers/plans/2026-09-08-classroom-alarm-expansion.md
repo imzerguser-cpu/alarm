@@ -1043,10 +1043,12 @@ git commit -m "feat: add Firebase init and Firestore store wrappers"
 
 - [ ] **Step 2: app.css에 폼 스타일 추가**
 
+**⚠️ Task 7 리뷰에서 발견되어 수정됨:** 원래 `.timetable-edit-form`도 `#timetablePanel`과 같은 `grid-area: timetable`을 썼는데, 편집모드에서 두 요소가 동시에 보이면 같은 그리드 칸에 겹쳐 그려진다. `grid-column: 2`(같은 열, 별도 행에 자동 배치)로 바꿔 시간표 패널 아래에 자연스럽게 이어지도록 고쳤다.
+
 ```css
 /* css/app.css 끝에 추가 */
 .timetable-edit-form {
-  grid-area: timetable; margin-top: 10px; background: #1a2233; border-radius: 14px;
+  grid-column: 2; margin-top: 10px; background: #1a2233; border-radius: 14px;
   padding: 14px; display: flex; flex-direction: column; gap: 8px;
 }
 .timetable-edit-form[hidden] { display: none; }
