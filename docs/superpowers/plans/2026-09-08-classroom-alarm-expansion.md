@@ -806,17 +806,20 @@ git commit -m "feat: add PIN-gated edit mode"
 
 ---
 
-## Task 6: Firebase 초기화 + Firestore 저장/구독 래퍼 (`js/firebase-config.js`, `js/store.js`)
+## Task 6: Firebase 초기화 + Firestore 저장/구독 래퍼 (`js/firebase-config.js`, `js/daily-reset.js`, `js/store.js`)
+
+**⚠️ 이 섹션은 Task 6 구현 중 발견된 결함을 수정해 원래 계획에서 변경되었다.** 원래는 `shouldResetDaily`를 `store.js` 안에 두고 `tests/store.test.js`가 `../js/store.js`에서 직접 import하도록 했는데, `store.js`가 Firebase CDN(`https://www.gstatic.com/...`)을 `import`하다 보니 **Node/Vitest의 기본 ESM 로더가 `https:` 스킴을 아예 지원하지 않아** (`Only URLs with a scheme in: file and data are supported by the default ESM loader`) 이 테스트는 어떤 환경에서도(샌드박스뿐 아니라 사용자 PC에서도) 항상 실패한다. 해결책은 `shouldResetDaily`를 Firebase를 전혀 import하지 않는 별도 파일 `js/daily-reset.js`로 분리하는 것이다.
 
 **Files:**
 - Create: `js/firebase-config.js`
+- Create: `js/daily-reset.js`
 - Create: `js/store.js`
 - Test: `tests/store.test.js`
 
 **Interfaces:**
 - Produces:
   - `db` (Firestore 인스턴스, `js/firebase-config.js`에서 export)
-  - `shouldResetDaily(storedDateKey: string|null|undefined, todayDateKey: string): boolean` — 순수 함수, 단위 테스트 대상.
+  - `shouldResetDaily(storedDateKey: string|null|undefined, todayDateKey: string): boolean` — `js/daily-reset.js`에서 export하는 순수 함수(Firebase 의존성 없음), 단위 테스트 대상. `js/store.js`는 이 함수를 `./daily-reset.js`에서 import해서 재사용·재수출(re-export)한다.
   - `subscribeSchedule(callback)`, `subscribeRoster(callback)`, `subscribeDaily(callback)` — `callback(data, fromCache: boolean)` 형태로 호출된다. `fromCache`가 `true`면 오프라인이라 마지막 캐시 데이터를 보여주고 있다는 뜻이며, Task 9에서 "연결 끊김" 표시에 사용한다.
   - `saveSchedule(weeklyData)`, `saveRoster(list)`, `saveDaily(data)`, `ensureTodayDaily(todayDateKey)` — Firestore를 직접 호출하는 wiring 함수(단위 테스트 대상 아님, Task 7·9에서 브라우저로 검증).
 - Consumes: 없음.
@@ -832,7 +835,7 @@ git commit -m "feat: add PIN-gated edit mode"
 ```js
 // tests/store.test.js
 import { describe, it, expect } from 'vitest';
-import { shouldResetDaily } from '../js/store.js';
+import { shouldResetDaily } from '../js/daily-reset.js';
 
 describe('shouldResetDaily', () => {
   it('returns true when stored date differs from today', () => {
@@ -851,9 +854,23 @@ describe('shouldResetDaily', () => {
 - [ ] **Step 2: 테스트 실행해서 실패 확인**
 
 Run: `npm test -- tests/store.test.js`
-Expected: FAIL — `Cannot find module '../js/store.js'`
+Expected: FAIL — `Cannot find module '../js/daily-reset.js'`
 
-- [ ] **Step 3: firebase-config.js 작성 (플레이스홀더)**
+- [ ] **Step 3: daily-reset.js 작성 (Firebase 의존성 없는 순수 함수)**
+
+```js
+// js/daily-reset.js
+export function shouldResetDaily(storedDateKey, todayDateKey) {
+  return storedDateKey !== todayDateKey;
+}
+```
+
+- [ ] **Step 4: 테스트 실행해서 통과 확인**
+
+Run: `npm test -- tests/store.test.js`
+Expected: 3개 테스트 PASS. 이 파일은 Firebase를 전혀 import하지 않으므로 Node/Vitest에서 항상 정상 동작한다.
+
+- [ ] **Step 5: firebase-config.js 작성 (플레이스홀더)**
 
 ```js
 // js/firebase-config.js
@@ -869,7 +886,7 @@ export const firebaseConfig = {
 };
 ```
 
-- [ ] **Step 4: store.js 작성**
+- [ ] **Step 6: store.js 작성**
 
 ```js
 // js/store.js
@@ -878,13 +895,12 @@ import {
   getFirestore, doc, setDoc, getDoc, onSnapshot,
 } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
+import { shouldResetDaily } from './daily-reset.js';
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
-export function shouldResetDaily(storedDateKey, todayDateKey) {
-  return storedDateKey !== todayDateKey;
-}
+export { shouldResetDaily };
 
 export function subscribeSchedule(callback) {
   return onSnapshot(doc(db, 'schedule', 'weekly'), { includeMetadataChanges: true }, (snap) => {
@@ -929,12 +945,12 @@ export async function ensureTodayDaily(todayDateKey) {
 }
 ```
 
-- [ ] **Step 5: 테스트 실행해서 통과 확인**
+- [ ] **Step 7: 전체 테스트 실행해서 회귀 확인**
 
-Run: `npm test -- tests/store.test.js`
-Expected: `shouldResetDaily` 관련 3개 테스트 PASS. (이 파일은 Firestore 함수도 export하지만, Vitest는 import 시점에 `initializeApp`을 호출하므로 Node 환경에서도 앱 객체 생성 자체는 성공한다 — 실제 네트워크 호출은 함수가 호출될 때만 발생하므로 테스트에는 영향 없음.)
+Run: `npm test`
+Expected: Task 1~5의 기존 테스트 + `tests/store.test.js`(daily-reset 기반) 모두 PASS. `store.js` 자체는 브라우저 전용이라 Node에서 import하면 여전히 `https:` 스킴 에러가 나지만, 테스트 파일이 더 이상 `store.js`를 import하지 않으므로 문제되지 않는다.
 
-- [ ] **Step 6: Firestore 보안 규칙 파일 작성**
+- [ ] **Step 8: Firestore 보안 규칙 파일 작성**
 
 PIN이 캐주얼한 보호 수준이라는 스펙 4.7의 합의에 따라, Firestore 규칙도 별도 로그인 없이 열어둔다(문서화된 트레이드오프).
 
@@ -952,10 +968,10 @@ service cloud.firestore {
 
 이 파일은 Firebase 콘솔의 "Firestore Database → 규칙" 탭에 사용자가 직접 붙여넣어야 적용된다(자동 배포 안 함 — Firebase CLI 로그인이 필요한 작업이라 이 플랜 범위 밖).
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add js/firebase-config.js js/store.js tests/store.test.js firestore.rules
+git add js/firebase-config.js js/daily-reset.js js/store.js tests/store.test.js firestore.rules
 git commit -m "feat: add Firebase init and Firestore store wrappers"
 ```
 
@@ -1189,12 +1205,13 @@ git commit -m "feat: add HiClass notice text formatter"
 ## Task 9: 알림장 UI + 아침활동 안내판 + Firestore 연동
 
 **Files:**
-- Modify: `js/main.js` (알림장 렌더링, 아침활동 배너, Firestore `roster`/`daily` 연동, 연결 끊김 표시 추가)
-- Modify: `index.html` (알림장 안내문 편집용 textarea 토글 + 연결 상태 표시 span 추가)
+- Modify: `js/main.js` (알림장 렌더링, 아침활동 배너, Firestore `roster`/`daily` 연동, 연결 끊김 표시, 학생 직접 추가 추가)
+- Modify: `index.html` (알림장 안내문 편집용 textarea 토글 + 연결 상태 표시 span + 학생 직접 추가 폼 추가)
+- Modify: `css/app.css` (학생 직접 추가 폼 스타일 추가)
 
 **Interfaces:**
 - Consumes: `subscribeRoster`, `saveRoster`, `subscribeDaily`, `saveDaily`, `ensureTodayDaily` (`js/store.js`, Task 6), `formatHiClassText` (`js/notice-format.js`, Task 8), `isMorningActive` (`js/schedule-times.js`, Task 2), `getDayKey` (Task 2), `window.__EDIT_MODE__` (Task 5), `INITIAL_ROSTER` (`js/seed-data.js`, Task 4).
-- Produces: Firestore `roster/students`, `daily/current` 문서. `#studentList`에 학생별 행(`data-no` 속성 포함, `.s-todo`는 편집모드에서 입력 가능한 `<input>`)을 렌더. Task 10(엑셀 업로드), Task 11(하이클래스 복사)이 같은 `roster`/`daily` 상태를 사용.
+- Produces: Firestore `roster/students`, `daily/current` 문서. `#studentList`에 학생별 행(`data-no` 속성 포함, `.s-todo`는 편집모드에서 입력 가능한 `<input>`)을 렌더. 편집모드에서만 보이는 "학생 추가" 폼(`#studentAddNameInput` + `#studentAddBtn`)으로 이름만 입력해 번호 자동 부여(기존 최댓값+1, 없으면 1) 후 `roster`에 추가. Task 10(엑셀 업로드, 일괄 등록/교체), Task 11(하이클래스 복사)이 같은 `roster`/`daily` 상태를 사용 — 엑셀 업로드는 명단 전체를 갈아끼우는 일괄 작업이고, 이 학생 추가 폼은 한 명만 빠르게 보태는 소규모 변경용이다.
 
 브라우저 수동 확인으로 검증한다(스펙 9절).
 
@@ -1318,18 +1335,61 @@ ensureTodayDaily(toDateKey(new Date())).then(() => {
 setInterval(renderMorningBanner, 15000);
 ```
 
-- [ ] **Step 4: 브라우저로 확인**
+- [ ] **Step 4: 학생 직접 추가 폼 (index.html + css/app.css + main.js)**
+
+`index.html`의 `<div id="studentList" class="student-list"></div>` 바로 뒤, `#hiclassCopyBtn` 버튼 앞에 추가:
+
+```html
+        <div id="studentAddForm" class="student-add-form">
+          <input id="studentAddNameInput" type="text" placeholder="학생 이름">
+          <button id="studentAddBtn">+ 학생 추가</button>
+        </div>
+```
+
+`css/app.css` 끝에 추가 (편집모드가 아닐 때는 숨김, 다른 편집 전용 요소와 같은 패턴):
+
+```css
+/* css/app.css 끝에 추가 */
+.student-add-form { display: none; margin-top: 10px; gap: 8px; }
+body.edit-mode .student-add-form { display: flex; }
+.student-add-form input {
+  flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #3a4864;
+  background: #0e1420; color: #fff;
+}
+.student-add-form button {
+  padding: 8px 14px; border-radius: 8px; border: none; background: #34495e;
+  color: #fff; font-weight: bold; cursor: pointer;
+}
+```
+
+`js/main.js` 끝에 추가 (엑셀 업로드가 명단을 통째로 교체하는 일괄 작업인 것과 달리, 이 폼은 학생 한 명만 이름으로 빠르게 추가한다. 번호는 기존 명단 중 최댓값+1로 자동 부여):
+
+```js
+// js/main.js 끝에 추가
+document.getElementById('studentAddBtn').addEventListener('click', () => {
+  const input = document.getElementById('studentAddNameInput');
+  const name = input.value.trim();
+  if (!name) return;
+  const nextNo = roster.reduce((max, s) => Math.max(max, s.no), 0) + 1;
+  const next = [...roster, { no: nextNo, name, role: '' }];
+  saveRoster(next);
+  input.value = '';
+});
+```
+
+- [ ] **Step 5: 브라우저로 확인**
 
 1. `✏️ 편집` 모드 진입 후 알림장 상단 안내문(`#noticeGeneralText`)을 클릭해 텍스트를 입력하고 다른 곳을 클릭(blur) → Firestore `daily/current.generalNotice`에 저장되는지 확인.
 2. 편집모드에서 학생 행의 "해야할일" 입력칸에 텍스트를 쓰고 포커스를 벗어나면 저장되는지 확인 (roster가 비어 있으면 Task 10에서 엑셀 업로드 후 다시 확인).
 3. 시스템 시간을 08:45로 맞추고 `daily.morningNotice`에 값을 넣은 뒤(Firebase 콘솔에서 직접 입력해도 됨) 배너가 뜨는지, 09:00을 넘기면 자동으로 사라지는지 확인.
 4. 개발자도구에서 네트워크를 오프라인으로 바꾼 뒤 데이터를 바꿔보면 화면 상단에 "⚠ 연결 끊김" 문구가 뜨는지, 온라인으로 되돌리면 문구가 사라지는지 확인.
+5. 편집모드에서만 "+ 학생 추가" 폼이 보이는지, 이름을 입력하고 버튼을 누르면 새 학생이 명단 맨 끝에 추가되고 번호가 기존 최댓값+1로 매겨지는지, 빈 명단에 처음 추가하면 1번이 되는지 확인.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add js/main.js index.html
-git commit -m "feat: wire notice board and morning activity banner to Firestore"
+git add js/main.js index.html css/app.css
+git commit -m "feat: wire notice board and morning activity banner to Firestore, add manual student add"
 ```
 
 ---
