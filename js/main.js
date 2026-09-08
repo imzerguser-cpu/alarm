@@ -62,6 +62,8 @@ initPinLock({
   onUnlock: () => {
     window.__EDIT_MODE__ = true;
     document.body.classList.add('edit-mode');
+    if (typeof renderStudentList === 'function') renderStudentList();
+    if (typeof renderNoticeGeneral === 'function') renderNoticeGeneral();
   },
 });
 
@@ -98,8 +100,11 @@ function renderStudentList() {
     todo.value = (daily.todos && daily.todos[String(student.no)]) || '';
     todo.disabled = !window.__EDIT_MODE__;
     todo.addEventListener('change', () => {
-      const nextTodos = { ...daily.todos, [String(student.no)]: todo.value };
-      saveDaily({ todos: nextTodos });
+      // 로컬 daily.todos를 펼쳐서 통째로 저장하면, 학생 여러 명의 할일을
+      // Firestore 응답이 오기 전에 연달아 수정할 때 먼저 쓴 값이 나중 쓰기에
+      // 덮여 사라질 수 있다(경쟁 조건). 점 표기 필드 경로로 그 학생의 항목만
+      // 갱신하면 Firestore가 서버 쪽에서 병합해 다른 학생의 할일은 안전하다.
+      saveDaily({ [`todos.${student.no}`]: todo.value });
     });
 
     row.append(name, role, todo);
