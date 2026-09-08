@@ -208,18 +208,26 @@
   </div>
 
   <div class="toolbar">
-    <button id="editModeBtn">✏️ 편집</button>
-    <button id="excelUploadBtn">📥 엑셀로 학생 명단 가져오기</button>
-    <input id="excelFileInput" type="file" accept=".xlsx,.xls" hidden>
-    <button id="installBtn">📲 홈 화면에 추가</button>
-    <div id="installMessage" class="install-message"></div>
+    <button id="editModeBtn">🔐 관리자 모드</button>
+
+    <div id="adminOnlyControls" class="admin-only-controls">
+      <button id="excelUploadBtn">📥 엑셀로 학생 명단 가져오기</button>
+      <input id="excelFileInput" type="file" accept=".xlsx,.xls" hidden>
+      <button id="installBtn">📲 홈 화면에 추가</button>
+      <div id="installMessage" class="install-message"></div>
+      <div class="pin-change">
+        <input id="newPinInput" type="password" inputmode="numeric" maxlength="4" placeholder="새 PIN(4자리)">
+        <button id="changePinBtn">PIN 변경</button>
+      </div>
+    </div>
+
     <button id="floatingWidgetBtn">🪟 PC 플로팅 위젯 열기</button>
     <div id="floatingWidgetMessage" class="install-message"></div>
   </div>
 
   <div id="pinModal" class="pin-modal" hidden>
     <div class="pin-modal-inner">
-      <p>편집 PIN을 입력하세요</p>
+      <p>관리자 PIN을 입력하세요</p>
       <input id="pinInput" type="password" inputmode="numeric" maxlength="4">
       <button id="pinSubmitBtn">확인</button>
     </div>

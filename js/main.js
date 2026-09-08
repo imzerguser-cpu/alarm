@@ -24,6 +24,14 @@ function handleSubscribeError(err) {
   setConnStatus(true);
 }
 
+// saveX() 호출이 실패해도(Firebase 미설정, 오프라인 등) 그냥 넘어가면
+// 교사는 방금 입력한 내용이 저장된 줄 알고 창을 닫아버릴 수 있다.
+// 구독 오류와 같은 "연결 끊김" 표시를 그대로 재사용해 눈에 보이게 한다.
+function handleSaveError(err) {
+  console.error('Firestore 저장 오류:', err);
+  setConnStatus(true);
+}
+
 let currentSchedule = INITIAL_SCHEDULE;
 let currentNotes = {};
 
@@ -72,7 +80,7 @@ subscribeSchedule((data, fromCache) => {
   // 편집해 둔 서버의 실제 시간표가 재연결 시 초기값으로 되돌아간다.
   // 서버에서 확인된 빈 문서일 때만 시드를 업로드한다.
   if (!Object.keys(data).length && !fromCache) {
-    saveSchedule(INITIAL_SCHEDULE); // 최초 1회 시드 업로드
+    saveSchedule(INITIAL_SCHEDULE).catch(handleSaveError); // 최초 1회 시드 업로드
   }
   renderTimetableNow();
 }, handleSubscribeError);
@@ -98,15 +106,20 @@ document.getElementById('ttEditApplyBtn').addEventListener('click', () => {
     subject = subjectPreset.value;
   }
   const next = { ...currentSchedule, [day]: { ...currentSchedule[day], [period]: subject } };
-  saveSchedule(next);
+  saveSchedule(next).catch(handleSaveError);
 
   // 세부 내용은 선택 사항이라 비워두면 그냥 과목명만 보이던 대로 유지된다.
   const noteValue = ttEditNoteInput.value.trim();
   const nextNotes = { ...currentNotes, [day]: { ...currentNotes[day], [period]: noteValue } };
-  saveScheduleNotes(nextNotes);
+  saveScheduleNotes(nextNotes).catch(handleSaveError);
 });
 
-const EDIT_PIN = '1234'; // TODO: 원하는 PIN으로 바꾸세요.
+// 관리자 화면(엑셀 업로드, PIN 변경 등)에서 바꿀 수 있도록 localStorage에
+// 저장해두고, 없으면 기본값 '1234'를 쓴다. let인 이유는 changePinBtn 클릭
+// 시 바로 바뀌어야 하기 때문 — pin-lock.js에는 getCorrectPin 함수로 넘겨서
+// 매번 최신 값을 물어보게 한다(값 자체를 넘기면 그 순간 값이 굳어버린다).
+const PIN_STORAGE_KEY = 'classAdminPin';
+let EDIT_PIN = localStorage.getItem(PIN_STORAGE_KEY) || '1234';
 window.__EDIT_MODE__ = false;
 
 initPinLock({
@@ -114,7 +127,7 @@ initPinLock({
   modalEl: document.getElementById('pinModal'),
   inputEl: document.getElementById('pinInput'),
   submitEl: document.getElementById('pinSubmitBtn'),
-  correctPin: EDIT_PIN,
+  getCorrectPin: () => EDIT_PIN,
   // 편집 버튼은 토글이다. 잠금 해제 상태에서 누르면 PIN 없이 바로 다시 잠근다
   // (교실 공용 태블릿이 하루 종일 켜져 있으므로 다시 잠글 수단이 필요하다).
   isUnlocked: () => window.__EDIT_MODE__,
@@ -134,6 +147,21 @@ initPinLock({
   },
 });
 
+// PIN 변경은 관리자 모드 안에서만 보이는 버튼이라(CSS), 이미 잠금 해제된
+// 상태에서만 눌릴 수 있다 — 별도로 window.__EDIT_MODE__를 다시 확인하지 않는다.
+document.getElementById('changePinBtn').addEventListener('click', () => {
+  const input = document.getElementById('newPinInput');
+  const value = input.value.trim();
+  if (!/^\d{4}$/.test(value)) {
+    alert('PIN은 숫자 4자리로 입력해주세요.');
+    return;
+  }
+  EDIT_PIN = value;
+  localStorage.setItem(PIN_STORAGE_KEY, value);
+  input.value = '';
+  alert('PIN이 변경되었습니다. 다음에 관리자 모드에 들어갈 때부터 새 PIN을 사용하세요.');
+});
+
 import {
   subscribeRoster, saveRoster, subscribeDaily, saveDaily, ensureTodayDaily,
 } from './store.js';
@@ -151,7 +179,7 @@ let daily = {
 // 재귀적으로 병합해 다른 학생의 값을 그대로 보존한다(점 표기 키는 updateDoc
 // 에서만 경로로 해석된다 — 이걸 착각해서 한 번 버그가 났던 자리).
 function saveStudentField(fieldName, studentNo, value) {
-  saveDaily({ [fieldName]: { [String(studentNo)]: value } });
+  saveDaily({ [fieldName]: { [String(studentNo)]: value } }).catch(handleSaveError);
 }
 
 function renderStudentList() {
@@ -181,7 +209,7 @@ function renderStudentList() {
       // role은 daily가 아니라 roster 배열에 있으므로, 해당 학생 항목만 교체한
       // 전체 배열을 saveRoster로 저장한다.
       const nextRoster = roster.map((s) => (s.no === student.no ? { ...s, role: role.value } : s));
-      saveRoster(nextRoster);
+      saveRoster(nextRoster).catch(handleSaveError);
     });
 
     const todo = document.createElement('input');
@@ -237,19 +265,19 @@ renderMorningBanner();
 // innerText를 쓴다(CSS white-space: pre-wrap과 formatHiClassText가 \n을 전제).
 document.getElementById('noticeGeneralText').addEventListener('blur', (e) => {
   if (!window.__EDIT_MODE__) return;
-  saveDaily({ generalNotice: e.target.innerText });
+  saveDaily({ generalNotice: e.target.innerText }).catch(handleSaveError);
 });
 
 document.getElementById('morningBannerText').addEventListener('blur', (e) => {
   if (!window.__EDIT_MODE__) return;
-  saveDaily({ morningNotice: e.target.innerText });
+  saveDaily({ morningNotice: e.target.innerText }).catch(handleSaveError);
 });
 
 subscribeRoster((list, fromCache) => {
   roster = list.length ? list : INITIAL_ROSTER;
   // 학생 명단도 시간표와 같은 규칙: 서버에서 확인된 빈 문서일 때만 시드를 올린다.
   if (!list.length && !fromCache) {
-    saveRoster(INITIAL_ROSTER);
+    saveRoster(INITIAL_ROSTER).catch(handleSaveError);
   }
   setConnStatus(fromCache);
   renderStudentList();
@@ -300,7 +328,7 @@ document.getElementById('studentAddBtn').addEventListener('click', () => {
   // 번호를 직접 골라 넣을 수 있으니, 그 번호가 목록 중간이어도 순서대로
   // 보이도록 저장 전에 번호순으로 정렬한다.
   const next = [...roster, { no, name, role: '' }].sort((a, b) => a.no - b.no);
-  saveRoster(next);
+  saveRoster(next).catch(handleSaveError);
   nameInput.value = '';
   noInput.value = '';
 });
@@ -322,7 +350,7 @@ wireExcelInput({
       const prev = roster.find((r) => r.name === s.name);
       return prev ? { ...s, role: prev.role } : s;
     });
-    saveRoster(merged);
+    saveRoster(merged).catch(handleSaveError);
   },
 });
 
@@ -372,6 +400,9 @@ wireFloatingWidgetButton({
       period: currentRow ? currentRow.querySelector('.tt-subject-text').textContent.trim() : '쉬는 시간',
       nextAlarm: document.getElementById('nextAlarmInfo').textContent,
       timer: document.getElementById('timerDisplay').textContent,
+      // 본 화면의 "연결 끊김" 표시와 같은 값을 그대로 읽어서 플로팅 창에도
+      // 띄운다 — PC 화면만 보고 있으면 본 페이지의 경고를 놓치기 쉽다.
+      connLost: !document.getElementById('connStatus').hidden,
     };
   },
 });

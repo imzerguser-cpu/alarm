@@ -70,21 +70,24 @@
   background: #1a2233; border-radius: 14px; padding: 14px;
   display: flex; flex-direction: column; gap: 8px;
 }
-/* 시간+교시(왼쪽, 위아래로 줄바꿈)와 과목(오른쪽)을 같은 글씨 크기로 맞추고,
-   전체를 오른쪽 30% 칸 안에서 가운데 정렬한다. */
+/* 시간+교시(왼쪽)와 과목(오른쪽)을 같은 글씨 크기로 맞추고, 두 칸을 각각
+   고정 폭으로 나눠서 그 안에서 가운데 정렬한다. 칸 폭을 고정하지 않으면
+   행마다 글자 길이가 달라(예: "중간놀이시간" vs "1교시") 시간·과목 줄이
+   행마다 다른 위치에서 시작해 표처럼 안 보인다 — 고정 폭이라야 여러 행에
+   걸쳐 시간 칸끼리, 과목 칸끼리 세로선이 맞는다. */
 .timetable-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 14px;
+  gap: 10px;
   padding: 14px 12px;
   border-radius: 10px;
   background: #0e1420;
 }
 .timetable-row.current { background: #ffcc00; color: #111; }
 .timetable-row .tt-left {
-  display: flex; flex-direction: column; align-items: center; line-height: 1.3;
+  flex: 0 0 92px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  line-height: 1.3;
 }
 .timetable-row .tt-time,
 .timetable-row .tt-label,
@@ -94,7 +97,9 @@
 .timetable-row .tt-time { color: #9aa7bd; font-weight: normal; }
 .timetable-row.current .tt-time { color: #333; }
 .timetable-row .tt-subject {
-  display: flex; flex-direction: column; align-items: center; line-height: 1.3;
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  line-height: 1.3;
 }
 .timetable-row .tt-note {
   font-size: 0.85rem; font-weight: normal; color: #9aa7bd; margin-top: 2px;
@@ -102,12 +107,21 @@
 .timetable-row.current .tt-note { color: #333; opacity: 0.85; }
 
 .toolbar {
-  max-width: 1200px; margin: 16px auto 0; padding: 0 20px;
+  max-width: 1200px; margin: 16px auto 0; padding: 0 20px 20px;
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
 }
 .toolbar button {
   padding: 10px 16px; border-radius: 8px; border: none; background: #34495e;
   color: #fff; font-weight: bold; cursor: pointer;
+}
+/* 엑셀 업로드·홈화면 추가·PIN 변경은 관리자 모드일 때만 보인다.
+   PC 플로팅 위젯 버튼은 여기 포함되지 않고 항상 보인다. */
+.admin-only-controls { display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
+body.edit-mode .admin-only-controls { display: flex; }
+.pin-change { display: flex; gap: 6px; }
+.pin-change input {
+  width: 110px; padding: 8px; border-radius: 8px; border: 1px solid #3a4864;
+  background: #0e1420; color: #fff;
 }
 .install-message { color: #9aa7bd; font-size: 0.9rem; }
 .install-message.show { color: #ffcc00; }

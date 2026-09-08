@@ -3,7 +3,7 @@ export function checkPin(input, correctPin) {
 }
 
 export function initPinLock({
-  buttonEl, modalEl, inputEl, submitEl, correctPin, onUnlock, isUnlocked, onLock,
+  buttonEl, modalEl, inputEl, submitEl, getCorrectPin, onUnlock, isUnlocked, onLock,
 }) {
   const open = () => {
     // 이미 편집모드면 버튼은 "잠그기"로 동작한다 — 잠글 때는 PIN을 묻지 않는다.
@@ -18,7 +18,9 @@ export function initPinLock({
   };
   const close = () => { modalEl.hidden = true; };
   const submit = () => {
-    if (checkPin(inputEl.value, correctPin)) {
+    // 정답 PIN을 고정값이 아니라 함수로 받는다 — PIN을 나중에 바꿀 수 있게
+    // 되면서, 호출 시점에 캡처된 값이 아니라 매번 최신 값을 물어봐야 한다.
+    if (checkPin(inputEl.value, getCorrectPin())) {
       close();
       onUnlock();
     } else {

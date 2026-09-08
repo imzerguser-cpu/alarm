@@ -17,6 +17,8 @@ export async function openFloatingWidget({ getContent }) {
     .fw-period { color: #ffcc00; margin-top: 4px; font-size: 1.1rem; font-weight: bold; }
     .fw-next { margin-top: 6px; font-size: 0.8rem; color: #9aa7bd; }
     .fw-timer { margin-top: 4px; font-size: 1.1rem; }
+    .fw-conn { margin-top: 6px; font-size: 0.75rem; color: #e74c3c; }
+    .fw-conn[hidden] { display: none; }
     .fw-controls { margin-top: 8px; display: flex; gap: 8px; }
     .fw-controls button {
       padding: 6px 12px; border-radius: 8px; border: none; cursor: pointer;
@@ -35,6 +37,7 @@ export async function openFloatingWidget({ getContent }) {
     <div class="fw-period" id="fwPeriod"></div>
     <div class="fw-next" id="fwNext"></div>
     <div class="fw-timer" id="fwTimer"></div>
+    <div class="fw-conn" id="fwConn" hidden>⚠ 연결 끊김</div>
     <div class="fw-controls">
       <button id="fwStartBtn">▶ 시작</button>
       <button id="fwStopBtn">⏹ 중지</button>
@@ -52,6 +55,7 @@ export async function openFloatingWidget({ getContent }) {
     pipWindow.document.getElementById('fwPeriod').textContent = content.period;
     pipWindow.document.getElementById('fwNext').textContent = content.nextAlarm;
     pipWindow.document.getElementById('fwTimer').textContent = content.timer;
+    pipWindow.document.getElementById('fwConn').hidden = !content.connLost;
     const running = window.classBell ? window.classBell.isRunning() : false;
     startBtn.disabled = running;
     stopBtn.disabled = !running;
