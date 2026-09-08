@@ -48,8 +48,13 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(req)
       .then((res) => {
-        const resClone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+        // 정상 응답만 캐시에 쓴다 — 404/500이나 학교 와이파이 캡티브 포털이
+        // 가로챈 로그인 페이지가 캐시에 저장되면 다음 오프라인 접속 때
+        // 그 잘못된 응답이 앱 대신 뜬다.
+        if (res.ok) {
+          const resClone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+        }
         return res;
       })
       .catch(() => caches.match(req))
