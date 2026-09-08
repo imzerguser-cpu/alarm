@@ -61,8 +61,12 @@ self.addEventListener('fetch', (event) => {
       // 가로챈 로그인 페이지가 캐시에 저장되면 다음 접속 때 그 잘못된 응답이
       // 앱 대신 뜬다.
       const networkUpdate = fetch(req, { cache: 'no-store' })
-        .then((res) => {
-          if (res.ok) cache.put(req, res.clone());
+        .then(async (res) => {
+          // cache.put()을 await하지 않으면 이 then이 fetch 응답 도착 즉시
+          // resolve돼버려서, 아래 waitUntil이 실제 저장 완료를 못 붙잡는다
+          // — 응답을 보낸 직후 SW가 종료되면(태블릿처럼 메모리가 빠듯한
+          // 환경에서 흔함) 캐시 갱신 자체가 씹힐 수 있다.
+          if (res.ok) await cache.put(req, res.clone());
           return res;
         })
         .catch(() => null);
@@ -77,7 +81,10 @@ self.addEventListener('fetch', (event) => {
 
       // 캐시가 아예 없던 첫 접속(또는 첫 오프라인 접속)이면 네트워크를 기다린다.
       const networkRes = await networkUpdate;
-      return networkRes || new Response('오프라인 상태이고 저장된 캐시도 없습니다.', { status: 503 });
-    })
+      return networkRes || new Response('오프라인 상태이고 저장된 캐시도 없습니다.', {
+        status: 503,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }).catch(() => fetch(req)) // caches API 자체가 실패하는 극히 드문 경우의 최후 안전망
   );
 });
