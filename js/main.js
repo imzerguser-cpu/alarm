@@ -34,6 +34,10 @@ function renderTimetableNow() {
   const rows = buildTodayRows(currentSchedule, dayKey, currentPeriodId, currentNotes);
   renderTimetable(document.getElementById('timetablePanel'), rows);
 }
+// Firestore 응답을 기다리지 않고 우선 기본값(INITIAL_SCHEDULE)으로 바로 그린다.
+// 응답이 오면 그 값으로 다시 그려진다 — 이게 없으면 응답이 오기 전까지(또는
+// Firebase가 아직 설정 전이라 응답이 늦어지는 동안) 화면이 잠깐 비어 보인다.
+renderTimetableNow();
 
 // 시간표 편집 폼 배선 — subscribeScheduleNotes의 콜백이 이 아래 선언들을
 // 참조하므로(구독 등록보다 먼저 정의해야 TDZ 걱정 없이 안전하다), 구독보다 위에 둔다.
@@ -191,6 +195,7 @@ function renderStudentList() {
     container.appendChild(row);
   }
 }
+renderStudentList(); // 위와 같은 이유로 기본 명단(INITIAL_ROSTER)을 바로 그린다.
 
 function renderNoticeGeneral() {
   const el = document.getElementById('noticeGeneralText');
@@ -215,6 +220,8 @@ function renderMorningBanner() {
     textEl.textContent = daily.morningNotice || '';
   }
 }
+renderNoticeGeneral(); // 위와 같은 이유로 빈 기본값으로 바로 그린다.
+renderMorningBanner();
 
 // contentEditable에서 Enter는 <div>/<br>을 만든다. textContent는 그 사이에 아무
 // 구분자도 넣지 않아 여러 줄이 한 줄로 뭉개지므로, 실제 줄바꿈을 보존하는
