@@ -199,3 +199,15 @@ wireInstallButton({
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
 }
+
+import { wireTimerWidget } from './timer.js';
+
+wireTimerWidget({
+  presetButtons: Array.from(document.querySelectorAll('.timer-presets button')),
+  customInput: document.getElementById('timerCustomMinutes'),
+  customSetBtn: document.getElementById('timerCustomSetBtn'),
+  displayEl: document.getElementById('timerDisplay'),
+  startBtn: document.getElementById('timerStartBtn'),
+  pauseBtn: document.getElementById('timerPauseBtn'),
+  resetBtn: document.getElementById('timerResetBtn'),
+});

@@ -77,6 +77,22 @@
     <header class="top-clock">
       <div id="clockNow">00:00:00</div>
       <div id="clockDate"></div>
+      <div class="timer-widget">
+        <div class="timer-presets">
+          <button data-seconds="60">1분</button>
+          <button data-seconds="180">3분</button>
+          <button data-seconds="300">5분</button>
+          <button data-seconds="600">10분</button>
+        </div>
+        <input id="timerCustomMinutes" type="number" min="1" max="60" placeholder="분">
+        <button id="timerCustomSetBtn">설정</button>
+        <div id="timerDisplay" class="timer-display">00:00</div>
+        <div class="timer-controls">
+          <button id="timerStartBtn">시작</button>
+          <button id="timerPauseBtn">일시정지</button>
+          <button id="timerResetBtn">초기화</button>
+        </div>
+      </div>
       <span id="connStatus" class="conn-status" hidden>⚠ 연결 끊김 — 마지막으로 받은 내용을 보여주고 있어요</span>
     </header>
 
