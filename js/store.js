@@ -10,30 +10,30 @@ export const db = getFirestore(app);
 
 export { shouldResetDaily };
 
-export function subscribeSchedule(callback) {
+export function subscribeSchedule(callback, onError) {
   return onSnapshot(doc(db, 'schedule', 'weekly'), { includeMetadataChanges: true }, (snap) => {
     callback(snap.exists() ? snap.data() : {}, snap.metadata.fromCache);
-  });
+  }, onError);
 }
 
 export function saveSchedule(weeklyData) {
   return setDoc(doc(db, 'schedule', 'weekly'), weeklyData);
 }
 
-export function subscribeRoster(callback) {
+export function subscribeRoster(callback, onError) {
   return onSnapshot(doc(db, 'roster', 'students'), { includeMetadataChanges: true }, (snap) => {
     callback(snap.exists() ? (snap.data().list || []) : [], snap.metadata.fromCache);
-  });
+  }, onError);
 }
 
 export function saveRoster(list) {
   return setDoc(doc(db, 'roster', 'students'), { list });
 }
 
-export function subscribeDaily(callback) {
+export function subscribeDaily(callback, onError) {
   return onSnapshot(doc(db, 'daily', 'current'), { includeMetadataChanges: true }, (snap) => {
     callback(snap.exists() ? snap.data() : null, snap.metadata.fromCache);
-  });
+  }, onError);
 }
 
 export function saveDaily(data) {

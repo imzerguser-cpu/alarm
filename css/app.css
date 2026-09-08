@@ -37,7 +37,10 @@
   border-radius: 8px; padding: 8px 10px;
 }
 .student-row .s-name { width: 70px; font-weight: bold; color: #ffcc00; flex-shrink: 0; }
-.student-row .s-role { width: 90px; color: #9aa7bd; font-size: 0.85rem; flex-shrink: 0; }
+.student-row .s-role {
+  width: 90px; min-width: 0; flex-shrink: 0; color: #9aa7bd; font-size: 0.85rem;
+  background: transparent; border: none; border-bottom: 1px solid #2a344a; padding: 4px;
+}
 .student-row .s-todo {
   flex: 1; min-width: 0; background: transparent; color: #fff; border: none;
   border-bottom: 1px solid #2a344a; padding: 4px;
@@ -95,11 +98,19 @@
     grid-template-columns: 1fr;
     grid-template-areas: "clock" "banner" "timetable" "center";
   }
+  /* 한 줄 배치에서는 2번째 열이 없으므로 편집 폼도 1열로 되돌린다. */
+  .timetable-edit-form { grid-column: 1; }
 }
 
 body.edit-mode .notice-general,
+body.edit-mode .s-role,
 body.edit-mode .s-todo {
   outline: 1px dashed #ffcc00;
+}
+/* 배너는 노란 바탕이라 노란 점선이 보이지 않으므로 어두운 점선을 쓴다.
+   비어 있어도 눌러서 입력할 수 있도록 최소 높이를 준다. */
+body.edit-mode #morningBannerText {
+  outline: 1px dashed #111; min-height: 1.4em;
 }
 
 .timetable-edit-form {

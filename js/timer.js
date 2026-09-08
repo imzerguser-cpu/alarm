@@ -42,6 +42,7 @@ export function wireTimerWidget({
     startedAtMs = null;
     clearInterval(intervalId);
     intervalId = null;
+    displayEl.classList.remove('done'); // 끝나서 빨갛게 된 표시를 초기화 때 해제
     render();
   }
 

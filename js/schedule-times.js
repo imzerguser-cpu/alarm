@@ -34,6 +34,8 @@ export function getCurrentPeriodId(date) {
 }
 
 export function isMorningActive(date) {
+  // 시각을 따로 적어두지 않고 PERIODS의 아침활동 항목에서 그대로 가져온다.
+  const morning = PERIODS[0];
   const nowMin = date.getHours() * 60 + date.getMinutes();
-  return nowMin >= toMinutes('08:40') && nowMin < toMinutes('09:00');
+  return nowMin >= toMinutes(morning.start) && nowMin < toMinutes(morning.end);
 }
