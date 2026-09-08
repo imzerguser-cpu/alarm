@@ -77,6 +77,83 @@
     <header class="top-clock">
       <div id="clockNow">00:00:00</div>
       <div id="clockDate"></div>
+      <span id="connStatus" class="conn-status" hidden>⚠ 연결 끊김 — 마지막으로 받은 내용을 보여주고 있어요</span>
+    </header>
+
+    <div id="morningBanner" class="morning-banner" hidden>
+      <div id="morningBannerText"></div>
+    </div>
+
+    <div class="main-row">
+      <section id="studentSection" class="student-section">
+        <div id="studentList" class="student-list"></div>
+        <div id="studentAddForm" class="student-add-form">
+          <input id="studentAddNoInput" type="number" min="1" placeholder="번호(자동)">
+          <input id="studentAddNameInput" type="text" placeholder="학생 이름">
+          <button id="studentAddBtn">+ 학생 추가</button>
+        </div>
+      </section>
+
+      <aside class="timetable-col">
+        <div id="timetablePanel" class="timetable-panel"></div>
+
+        <div id="timetableEditForm" class="timetable-edit-form" hidden>
+          <h3>시간표 편집</h3>
+          <label>요일
+            <select id="ttEditDay">
+              <option value="mon">월</option>
+              <option value="tue">화</option>
+              <option value="wed">수</option>
+              <option value="thu">목</option>
+              <option value="fri">금</option>
+            </select>
+          </label>
+          <label>교시
+            <select id="ttEditPeriod">
+              <option value="p1">1교시</option>
+              <option value="p2">2교시</option>
+              <option value="p3">3교시</option>
+              <option value="p4">4교시</option>
+              <option value="p5">5교시</option>
+              <option value="p6">6교시</option>
+              <option value="p7">7교시</option>
+              <option value="p8">8교시</option>
+            </select>
+          </label>
+          <label>과목
+            <select id="ttEditSubjectPreset">
+              <option value="국어">국어</option>
+              <option value="수학">수학</option>
+              <option value="사회">사회</option>
+              <option value="과학">과학</option>
+              <option value="영어">영어</option>
+              <option value="도덕">도덕</option>
+              <option value="실과">실과</option>
+              <option value="음악">음악</option>
+              <option value="미술">미술</option>
+              <option value="체육">체육</option>
+              <option value="창체">창체</option>
+              <option value="방과후">방과후</option>
+              <option value="__custom">기타(직접입력)</option>
+              <option value="__clear">비우기(교시 삭제)</option>
+            </select>
+          </label>
+          <input id="ttEditSubjectCustom" type="text" placeholder="과목명 직접 입력" hidden>
+          <label>세부 내용(선택)
+            <input id="ttEditNote" type="text" placeholder="예: 3단원 분수의 나눗셈">
+          </label>
+          <button id="ttEditApplyBtn">적용</button>
+        </div>
+      </aside>
+    </div>
+
+    <section id="noticeSection" class="notice-section">
+      <div id="noticeGeneralText" class="notice-general"></div>
+      <button id="hiclassCopyBtn" class="hiclass-btn">📋 하이클래스용 복사</button>
+    </section>
+
+    <section class="timer-section">
+      <h3 class="timer-heading">⏱ 타이머</h3>
       <div class="timer-widget">
         <div class="timer-presets">
           <button data-seconds="60">1분</button>
@@ -93,27 +170,12 @@
           <button id="timerResetBtn">초기화</button>
         </div>
       </div>
-      <span id="connStatus" class="conn-status" hidden>⚠ 연결 끊김 — 마지막으로 받은 내용을 보여주고 있어요</span>
-    </header>
+    </section>
 
-    <div id="morningBanner" class="morning-banner" hidden>
-      <div id="morningBannerText"></div>
-    </div>
+    <div class="bell-wrap">
+      <h1>🔔 교실 수업 알리미</h1>
 
-    <main class="center-col">
-      <section id="noticeBoard" class="notice-board">
-        <div id="noticeGeneralText" class="notice-general"></div>
-        <div id="studentList" class="student-list"></div>
-        <div id="studentAddForm" class="student-add-form">
-          <input id="studentAddNameInput" type="text" placeholder="학생 이름">
-          <button id="studentAddBtn">+ 학생 추가</button>
-        </div>
-        <button id="hiclassCopyBtn" class="hiclass-btn">📋 하이클래스용 복사</button>
-      </section>
-
-      <div class="bell-wrap">
-        <h1>🔔 교실 수업 알리미</h1>
-
+      <div id="bellAdminSection" class="bell-admin-section">
         <div class="clock-card">
           <div id="nextAlarmInfo"></div>
         </div>
@@ -134,53 +196,6 @@
           </div>
         </div>
       </div>
-    </main>
-
-    <aside id="timetablePanel" class="timetable-panel"></aside>
-
-    <div id="timetableEditForm" class="timetable-edit-form" hidden>
-      <h3>시간표 편집</h3>
-      <label>요일
-        <select id="ttEditDay">
-          <option value="mon">월</option>
-          <option value="tue">화</option>
-          <option value="wed">수</option>
-          <option value="thu">목</option>
-          <option value="fri">금</option>
-        </select>
-      </label>
-      <label>교시
-        <select id="ttEditPeriod">
-          <option value="p1">1교시</option>
-          <option value="p2">2교시</option>
-          <option value="p3">3교시</option>
-          <option value="p4">4교시</option>
-          <option value="p5">5교시</option>
-          <option value="p6">6교시</option>
-          <option value="p7">7교시</option>
-          <option value="p8">8교시</option>
-        </select>
-      </label>
-      <label>과목
-        <select id="ttEditSubjectPreset">
-          <option value="국어">국어</option>
-          <option value="수학">수학</option>
-          <option value="사회">사회</option>
-          <option value="과학">과학</option>
-          <option value="영어">영어</option>
-          <option value="도덕">도덕</option>
-          <option value="실과">실과</option>
-          <option value="음악">음악</option>
-          <option value="미술">미술</option>
-          <option value="체육">체육</option>
-          <option value="창체">창체</option>
-          <option value="방과후">방과후</option>
-          <option value="__custom">기타(직접입력)</option>
-          <option value="__clear">비우기(교시 삭제)</option>
-        </select>
-      </label>
-      <input id="ttEditSubjectCustom" type="text" placeholder="과목명 직접 입력" hidden>
-      <button id="ttEditApplyBtn">적용</button>
     </div>
   </div>
 

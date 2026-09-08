@@ -16,11 +16,23 @@ export function clampMinutesToSeconds(minutes) {
   return Math.round(Math.min(n, 60) * 60);
 }
 
+function pickKoreanVoice() {
+  const voices = window.speechSynthesis.getVoices();
+  const koreanVoices = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith('ko'));
+  if (!koreanVoices.length) return null;
+  const maleHint = koreanVoices.find((v) => /male|남성|injoon/i.test(v.name));
+  return maleHint || koreanVoices[0];
+}
+
 function speak(text) {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'ko-KR';
+  utter.rate = 1.08;
+  utter.pitch = 0.9;
+  const voice = pickKoreanVoice();
+  if (voice) utter.voice = voice;
   window.speechSynthesis.speak(utter);
 }
 

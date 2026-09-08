@@ -1,7 +1,8 @@
 import { PERIODS } from './schedule-times.js';
 
-export function buildTodayRows(weeklySchedule, dayKey, currentPeriodId) {
+export function buildTodayRows(weeklySchedule, dayKey, currentPeriodId, weeklyNotes) {
   const daySubjects = (weeklySchedule && weeklySchedule[dayKey]) || {};
+  const dayNotes = (weeklyNotes && weeklyNotes[dayKey]) || {};
   const rows = [];
   for (const period of PERIODS) {
     let subject;
@@ -17,6 +18,7 @@ export function buildTodayRows(weeklySchedule, dayKey, currentPeriodId) {
       time: `${period.start}~${period.end}`,
       label: period.label,
       subject,
+      note: dayNotes[period.id] || '',
       isCurrent: period.id === currentPeriodId,
     });
   }
@@ -36,7 +38,18 @@ export function renderTimetable(container, rows) {
     label.textContent = row.label;
     const subject = document.createElement('span');
     subject.className = 'tt-subject';
-    subject.textContent = row.subject;
+    const subjectText = document.createElement('span');
+    subjectText.className = 'tt-subject-text';
+    subjectText.textContent = row.subject;
+    subject.appendChild(subjectText);
+    // 교사가 세부 내용을 적어둔 경우에만 과목 아래에 작은 글씨로 덧붙인다.
+    // 아무것도 안 적었으면 과목명만 보이던 기존 모습 그대로다.
+    if (row.note) {
+      const note = document.createElement('span');
+      note.className = 'tt-note';
+      note.textContent = row.note;
+      subject.appendChild(note);
+    }
     el.append(time, label, subject);
     container.appendChild(el);
   }

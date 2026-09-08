@@ -1,35 +1,35 @@
 .app-grid {
-  display: grid;
-  grid-template-columns: 1fr 280px;
-  grid-template-areas:
-    "clock   timetable"
-    "banner  timetable"
-    "center  timetable";
+  display: flex;
+  flex-direction: column;
   gap: 16px;
   max-width: 1200px;
   margin: 0 auto;
   padding: 16px 20px 0;
 }
 
-.top-clock { grid-area: clock; text-align: center; }
+.top-clock { text-align: center; }
 .top-clock #clockNow { font-size: 3rem; font-weight: bold; letter-spacing: 2px; color: #fff; }
 .top-clock #clockDate { font-size: 1.1rem; color: #ffcc00; margin-top: 4px; }
 
 .morning-banner {
-  grid-area: banner;
   background: #ffcc00; color: #111; border-radius: 14px;
   padding: 18px 20px; text-align: center; font-size: 1.2rem; font-weight: bold;
 }
 .morning-banner[hidden] { display: none; }
 
-.center-col { grid-area: center; }
-
-.notice-board {
-  background: #1a2233; border-radius: 14px; padding: 20px; margin-bottom: 16px;
+/* 학생 목록(왼쪽)과 시간표(오른쪽)를 나란히 배치 */
+.main-row {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 16px;
+  align-items: start;
 }
-.notice-general {
-  min-height: 2.4em; padding: 10px; border-radius: 8px; background: #0e1420;
-  color: #fff; margin-bottom: 14px; white-space: pre-wrap;
+@media (max-width: 800px) {
+  .main-row { grid-template-columns: 1fr; }
+}
+
+.student-section {
+  background: #1a2233; border-radius: 14px; padding: 20px;
 }
 .student-list { display: flex; flex-direction: column; gap: 8px; }
 .student-row {
@@ -45,24 +45,50 @@
   flex: 1; min-width: 0; background: transparent; color: #fff; border: none;
   border-bottom: 1px solid #2a344a; padding: 4px;
 }
+
+.notice-section {
+  background: #1a2233; border-radius: 14px; padding: 20px;
+}
+.notice-general {
+  min-height: 2.4em; padding: 10px; border-radius: 8px; background: #0e1420;
+  color: #fff; margin-bottom: 14px; white-space: pre-wrap;
+}
 .hiclass-btn {
-  margin-top: 14px; padding: 10px 16px; border-radius: 8px; border: none;
+  padding: 10px 16px; border-radius: 8px; border: none;
   background: #34495e; color: #fff; font-weight: bold; cursor: pointer;
 }
 
+/* 시간표 패널 + (편집모드일 때만 보이는) 편집 폼을 세로로 묶는 오른쪽 열 */
+.timetable-col {
+  display: flex; flex-direction: column; gap: 10px;
+}
 .timetable-panel {
-  grid-area: timetable; background: #1a2233; border-radius: 14px; padding: 14px;
-  display: flex; flex-direction: column; gap: 6px; height: fit-content;
+  background: #1a2233; border-radius: 14px; padding: 14px;
+  display: flex; flex-direction: column; gap: 8px;
 }
 .timetable-row {
-  display: flex; flex-direction: column; gap: 2px; padding: 8px 10px;
-  border-radius: 8px; background: #0e1420;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 14px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #0e1420;
 }
 .timetable-row.current { background: #ffcc00; color: #111; }
-.timetable-row .tt-time { font-size: 0.75rem; color: #9aa7bd; }
+.timetable-row .tt-time { grid-column: 1; grid-row: 1; font-size: 0.95rem; color: #9aa7bd; }
 .timetable-row.current .tt-time { color: #333; }
-.timetable-row .tt-label { font-size: 0.8rem; }
-.timetable-row .tt-subject { font-weight: bold; }
+.timetable-row .tt-label { grid-column: 1; grid-row: 2; font-size: 1rem; font-weight: bold; }
+.timetable-row .tt-subject {
+  grid-column: 2; grid-row: 1 / span 2;
+  display: flex; flex-direction: column; justify-content: center;
+  font-size: 1.5rem; font-weight: bold; line-height: 1.3;
+}
+.timetable-row .tt-note {
+  font-size: 0.85rem; font-weight: normal; color: #9aa7bd; margin-top: 2px;
+}
+.timetable-row.current .tt-note { color: #333; opacity: 0.85; }
 
 .toolbar {
   max-width: 1200px; margin: 16px auto 0; padding: 0 20px;
@@ -93,18 +119,6 @@
   color: #111; font-weight: bold; cursor: pointer;
 }
 
-@media (max-width: 800px) {
-  .app-grid {
-    grid-template-columns: 1fr;
-    grid-template-areas: "clock" "banner" "timetable" "center";
-  }
-  /* 한 줄 배치에서는 2번째 열이 없으므로 편집 폼도 1열로 되돌린다.
-     아래 116행의 기본 규칙과 이름이 같은 특이도(0,1,0)라 소스 순서상
-     뒤에 오는 116행이 이겨버리는 문제가 있어, 부모 결합자로 특이도를
-     (0,2,0)까지 올려 미디어쿼리 안에서도 확실히 이기도록 한다. */
-  .app-grid > .timetable-edit-form { grid-column: 1; }
-}
-
 body.edit-mode .notice-general,
 body.edit-mode .s-role,
 body.edit-mode .s-todo {
@@ -119,8 +133,8 @@ body.edit-mode #morningBannerText {
 #morningBannerText { white-space: pre-wrap; }
 
 .timetable-edit-form {
-  grid-column: 2; margin-top: 10px; background: #1a2233; border-radius: 14px;
-  padding: 14px; display: flex; flex-direction: column; gap: 8px;
+  background: #1a2233; border-radius: 14px;
+  padding: 14px; display: none; flex-direction: column; gap: 8px;
 }
 .timetable-edit-form[hidden] { display: none; }
 .timetable-edit-form label { display: flex; flex-direction: column; font-size: 0.85rem; color: #9aa7bd; gap: 4px; }
@@ -135,20 +149,31 @@ body.edit-mode .timetable-edit-form { display: flex; }
 
 .conn-status { display: block; margin-top: 4px; font-size: 0.85rem; color: #e74c3c; }
 .conn-status[hidden] { display: none; }
+/* 좁은 화면(교실 태블릿)에서는 편집모드가 아니면 연결 끊김 경고를 숨긴다 —
+   학생들이 보는 화면에 굳이 경고를 띄울 필요는 없고, 교사가 편집모드로
+   들어가거나 PC(넓은 화면)로 열었을 때만 보이면 충분하다. */
+@media (max-width: 800px) {
+  .conn-status { display: none; }
+  body.edit-mode .conn-status:not([hidden]) { display: block; }
+}
 
 .student-add-form { display: none; margin-top: 10px; gap: 8px; }
 body.edit-mode .student-add-form { display: flex; }
-.student-add-form input {
-  flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #3a4864;
+.student-add-form input { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #3a4864;
   background: #0e1420; color: #fff;
 }
+.student-add-form input[type="number"] { flex: 0 0 90px; }
 .student-add-form button {
   padding: 8px 14px; border-radius: 8px; border: none; background: #34495e;
   color: #fff; font-weight: bold; cursor: pointer;
 }
 
+.timer-section {
+  background: #1a2233; border-radius: 14px; padding: 16px 20px;
+}
+.timer-heading { margin: 0 0 10px; font-size: 1.05rem; color: #ffcc00; text-align: center; }
 .timer-widget {
-  margin-top: 10px; display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   gap: 8px; flex-wrap: wrap;
 }
 .timer-presets { display: flex; gap: 6px; }
@@ -167,3 +192,7 @@ body.edit-mode .student-add-form { display: flex; }
 .timer-controls { display: flex; gap: 6px; }
 
 .toolbar button:disabled { background: #333; color: #777; cursor: not-allowed; }
+
+/* 관리자 모드에서만 기존 수업종 알리미(시작/중지/음성테스트, 알림 시간표)를 보여준다. */
+#bellAdminSection { display: none; }
+body.edit-mode #bellAdminSection { display: block; }

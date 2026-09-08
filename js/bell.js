@@ -75,7 +75,12 @@
 
   function pickKoreanVoice() {
     const voices = window.speechSynthesis.getVoices();
-    return voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('ko')) || null;
+    const koreanVoices = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith('ko'));
+    if (!koreanVoices.length) return null;
+    // Web Speech API는 성별 정보를 따로 주지 않아 이름으로 추정할 수밖에 없다.
+    // "Microsoft InJoon"처럼 이름에 남성을 암시하는 표현이 있으면 그걸 우선한다.
+    const maleHint = koreanVoices.find((v) => /male|남성|injoon/i.test(v.name));
+    return maleHint || koreanVoices[0];
   }
 
   function speak(text) {
@@ -86,7 +91,8 @@
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'ko-KR';
-    utter.rate = 0.95;
+    utter.rate = 1.08; // 기존(0.95)보다 아주 조금 빠르게
+    utter.pitch = 0.9; // 살짝 낮춰 더 자연스러운 남성 톤에 가깝게
     const voice = pickKoreanVoice();
     if (voice) utter.voice = voice;
     window.speechSynthesis.speak(utter);
@@ -215,6 +221,7 @@
   alarmBannerCloseBtn.addEventListener('click', hideBanner);
   addRowBtn.addEventListener('click', () => {
     schedule.push({ time: '09:00', message: '새 알림 내용을 입력하세요.' });
+    schedule.sort((a, b) => a.time.localeCompare(b.time));
     renderSchedule();
   });
   saveScheduleBtn.addEventListener('click', () => {

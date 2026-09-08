@@ -34,4 +34,16 @@ describe('buildTodayRows', () => {
     expect(rows.find((r) => r.id === 'lunch').subject).toBe('점심시간');
     expect(rows.find((r) => r.id === 'morning').subject).toBe('아침활동');
   });
+
+  it('includes a note when weeklyNotes has one for that day/period, empty string otherwise', () => {
+    const notes = { tue: { p2: '3단원 분수의 나눗셈' } };
+    const rows = buildTodayRows(SAMPLE_TUE, 'tue', null, notes);
+    expect(rows.find((r) => r.id === 'p2').note).toBe('3단원 분수의 나눗셈');
+    expect(rows.find((r) => r.id === 'p1').note).toBe('');
+  });
+
+  it('defaults note to an empty string when weeklyNotes is omitted', () => {
+    const rows = buildTodayRows(SAMPLE_TUE, 'tue', null);
+    expect(rows.find((r) => r.id === 'p2').note).toBe('');
+  });
 });

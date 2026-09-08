@@ -2,7 +2,9 @@ import { getDayKey, getCurrentPeriodId } from './schedule-times.js';
 import { buildTodayRows, renderTimetable } from './timetable.js';
 import { INITIAL_SCHEDULE } from './seed-data.js';
 import { initPinLock } from './pin-lock.js';
-import { subscribeSchedule, saveSchedule } from './store.js';
+import {
+  subscribeSchedule, saveSchedule, subscribeScheduleNotes, saveScheduleNotes,
+} from './store.js';
 
 function toDateKey(date) {
   const y = date.getFullYear();
@@ -23,12 +25,13 @@ function handleSubscribeError(err) {
 }
 
 let currentSchedule = INITIAL_SCHEDULE;
+let currentNotes = {};
 
 function renderTimetableNow() {
   const now = new Date();
   const dayKey = getDayKey(now);
   const currentPeriodId = getCurrentPeriodId(now);
-  const rows = buildTodayRows(currentSchedule, dayKey, currentPeriodId);
+  const rows = buildTodayRows(currentSchedule, dayKey, currentPeriodId, currentNotes);
   renderTimetable(document.getElementById('timetablePanel'), rows);
 }
 
@@ -40,6 +43,11 @@ subscribeSchedule((data, fromCache) => {
   if (!Object.keys(data).length && !fromCache) {
     saveSchedule(INITIAL_SCHEDULE); // 최초 1회 시드 업로드
   }
+  renderTimetableNow();
+}, handleSubscribeError);
+
+subscribeScheduleNotes((data) => {
+  currentNotes = data || {};
   renderTimetableNow();
 }, handleSubscribeError);
 
@@ -65,6 +73,13 @@ document.getElementById('ttEditApplyBtn').addEventListener('click', () => {
   }
   const next = { ...currentSchedule, [day]: { ...currentSchedule[day], [period]: subject } };
   saveSchedule(next);
+
+  // 세부 내용은 선택 사항이라 비워두면 그냥 과목명만 보이던 대로 유지된다.
+  const noteInput = document.getElementById('ttEditNote');
+  const noteValue = noteInput.value.trim();
+  const nextNotes = { ...currentNotes, [day]: { ...currentNotes[day], [period]: noteValue } };
+  saveScheduleNotes(nextNotes);
+  noteInput.value = '';
 });
 
 const EDIT_PIN = '1234'; // TODO: 원하는 PIN으로 바꾸세요.
@@ -196,6 +211,10 @@ document.getElementById('morningBannerText').addEventListener('blur', (e) => {
 
 subscribeRoster((list, fromCache) => {
   roster = list.length ? list : INITIAL_ROSTER;
+  // 학생 명단도 시간표와 같은 규칙: 서버에서 확인된 빈 문서일 때만 시드를 올린다.
+  if (!list.length && !fromCache) {
+    saveRoster(INITIAL_ROSTER);
+  }
   setConnStatus(fromCache);
   renderStudentList();
 }, handleSubscribeError);
@@ -227,13 +246,25 @@ setInterval(() => {
 
 document.getElementById('studentAddBtn').addEventListener('click', () => {
   if (!window.__EDIT_MODE__) return;
-  const input = document.getElementById('studentAddNameInput');
-  const name = input.value.trim();
+  const nameInput = document.getElementById('studentAddNameInput');
+  const noInput = document.getElementById('studentAddNoInput');
+  const name = nameInput.value.trim();
   if (!name) return;
-  const nextNo = roster.reduce((max, s) => Math.max(max, s.no), 0) + 1;
-  const next = [...roster, { no: nextNo, name, role: '' }];
+  const suggestedNo = roster.reduce((max, s) => Math.max(max, s.no), 0) + 1;
+  // 번호를 비워두면 자동으로 다음 번호를 매기고, 직접 입력하면 그 번호를 쓴다.
+  const no = noInput.value.trim() ? Number(noInput.value) : suggestedNo;
+  if (!Number.isInteger(no) || no <= 0) {
+    alert('번호는 1 이상의 정수로 입력해주세요.');
+    return;
+  }
+  if (roster.some((s) => s.no === no)) {
+    alert(`이미 ${no}번 학생이 있습니다. 다른 번호를 입력해주세요.`);
+    return;
+  }
+  const next = [...roster, { no, name, role: '' }];
   saveRoster(next);
-  input.value = '';
+  nameInput.value = '';
+  noInput.value = '';
 });
 
 import { wireExcelInput } from './excel-import.js';
@@ -295,12 +326,14 @@ import { wireFloatingWidgetButton } from './floating-widget.js';
 wireFloatingWidgetButton({
   buttonEl: document.getElementById('floatingWidgetBtn'),
   messageEl: document.getElementById('floatingWidgetMessage'),
-  getContent: () => ({
-    time: document.getElementById('clockNow').textContent,
-    period: (() => {
-      const current = document.querySelector('.timetable-row.current .tt-subject');
-      return current ? current.textContent : '';
-    })(),
-    timer: document.getElementById('timerDisplay').textContent,
-  }),
+  getContent: () => {
+    const currentRow = document.querySelector('.timetable-row.current');
+    return {
+      date: document.getElementById('clockDate').textContent,
+      time: document.getElementById('clockNow').textContent,
+      period: currentRow ? currentRow.querySelector('.tt-subject-text').textContent.trim() : '쉬는 시간',
+      nextAlarm: document.getElementById('nextAlarmInfo').textContent,
+      timer: document.getElementById('timerDisplay').textContent,
+    };
+  },
 });

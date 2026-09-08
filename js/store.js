@@ -20,6 +20,18 @@ export function saveSchedule(weeklyData) {
   return setDoc(doc(db, 'schedule', 'weekly'), weeklyData);
 }
 
+// 교시별 과목 아래에 교사가 덧붙이는 세부 내용(선택 사항). schedule/weekly와
+// 같은 요일→교시 키 구조를 쓰지만, 값이 있는 교시만 채워지는 성긴(sparse) 문서다.
+export function subscribeScheduleNotes(callback, onError) {
+  return onSnapshot(doc(db, 'schedule', 'notes'), { includeMetadataChanges: true }, (snap) => {
+    callback(snap.exists() ? snap.data() : {}, snap.metadata.fromCache);
+  }, onError);
+}
+
+export function saveScheduleNotes(notesData) {
+  return setDoc(doc(db, 'schedule', 'notes'), notesData);
+}
+
 export function subscribeRoster(callback, onError) {
   return onSnapshot(doc(db, 'roster', 'students'), { includeMetadataChanges: true }, (snap) => {
     callback(snap.exists() ? (snap.data().list || []) : [], snap.metadata.fromCache);

@@ -21,4 +21,10 @@ export const INITIAL_SCHEDULE = {
   },
 };
 
-export const INITIAL_ROSTER = [];
+export const INITIAL_ROSTER = [
+  { no: 1, name: '김대현', role: '' },
+  { no: 2, name: '나대한', role: '' },
+  { no: 3, name: '백은성', role: '' },
+  { no: 4, name: '민주은', role: '' },
+  { no: 5, name: '신서희', role: '' },
+];
