@@ -416,6 +416,13 @@ wireFloatingWidgetButton({
 // 여기서부터는 위에서 정의한 모든 렌더 함수·상태·이벤트 배선이 끝난 뒤이므로
 // (이 함수는 맨 마지막에 호출된다) 어떤 순서 문제도 없다.
 async function loadInitialData() {
+  // 앞선 단계(예: 시간표 읽기)가 실패했다면, 뒤 단계(roster)가 서버에서 정상
+  // 응답을 받았다는 이유만으로 "연결 끊김" 표시를 지우면 안 된다 — 그러면
+  // 시간표가 조용히 기본값으로 대체된 사실을 교사가 알아챌 방법이 없어지고,
+  // 그 상태에서 한 칸만 수정해도 saveSchedule은 병합 없는 전체 덮어쓰기라
+  // 서버의 실제 시간표를 영구히 지울 수 있다.
+  let hadError = false;
+
   try {
     const { data, fromCache } = await fetchSchedule();
     currentSchedule = Object.keys(data).length ? data : INITIAL_SCHEDULE;
@@ -427,6 +434,7 @@ async function loadInitialData() {
     }
   } catch (err) {
     handleLoadError(err);
+    hadError = true;
   }
 
   try {
@@ -434,6 +442,7 @@ async function loadInitialData() {
     currentNotes = data || {};
   } catch (err) {
     handleLoadError(err);
+    hadError = true;
   }
   renderTimetableNow();
   syncNoteField();
@@ -444,11 +453,10 @@ async function loadInitialData() {
     if (!list.length && !fromCache) {
       trackSave(saveRoster(INITIAL_ROSTER));
     }
-    // roster는 daily와 함께 교사가 매일 들여다보는 데이터라, 이 값이 캐시(오프라인)
-    // 에서 왔는지를 "연결 끊김" 표시의 기준으로 삼는다 — 성공(서버 응답)이면 지운다.
-    setConnStatus(fromCache);
+    setConnStatus(hadError || fromCache);
   } catch (err) {
     handleLoadError(err);
+    hadError = true;
   }
   renderStudentList();
 

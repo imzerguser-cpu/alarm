@@ -62,7 +62,12 @@ export async function ensureTodayDaily(todayDateKey) {
     const fresh = {
       date: todayDateKey, morningNotice: '', generalNotice: '', todos: {}, submits: {},
     };
-    await setDoc(ref, fresh);
+    // setDoc()은 오프라인 지속성이 켜진 상태에서 오프라인이면 실제 서버 응답이
+    // 올 때까지 프라미스가 resolve되지 않는다(로컬 캐시에는 즉시 반영되지만).
+    // await하면 자정 날짜 전환이나 최초 로드가 오프라인 상태에서 그대로
+    // 멈춰버리므로(재연결 전까지 화면에 어제 내용이 그대로 남는다), 쓰기는
+    // 백그라운드로 흘려보내고 fresh는 즉시 반환한다.
+    setDoc(ref, fresh).catch((err) => console.error('daily 초기화 저장 실패:', err));
     return fresh;
   }
   return current;
