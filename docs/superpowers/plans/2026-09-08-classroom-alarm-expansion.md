@@ -779,9 +779,17 @@ initPinLock({
   onUnlock: () => {
     window.__EDIT_MODE__ = true;
     document.body.classList.add('edit-mode');
+    // renderStudentList/renderNoticeGeneral는 Task 9에서 정의되지만, 함수 선언(hoisting)
+    // 덕분에 이 시점(사용자가 편집 버튼을 눌러야만 실행됨, 즉 모듈 로드가 끝난 한참 뒤)에는
+    // 이미 정의돼 있어 문제없이 호출된다. 이 호출이 없으면 PIN을 맞게 입력해도 학생 할일
+    // 입력칸(.s-todo)의 disabled와 안내문의 contentEditable이 갱신되지 않아 편집이 안 된다.
+    if (typeof renderStudentList === 'function') renderStudentList();
+    if (typeof renderNoticeGeneral === 'function') renderNoticeGeneral();
   },
 });
 ```
+
+**⚠️ Task 9 리뷰에서 발견되어 수정됨(2026-09-08):** 원래는 `onUnlock`이 `window.__EDIT_MODE__`와 `edit-mode` 클래스만 바꾸고 끝났는데, `.s-todo`의 `disabled`와 안내문의 `contentEditable`은 CSS가 아니라 DOM 속성이라 Firestore 스냅샷이 다시 오기 전까지는 갱신되지 않아 — PIN을 맞게 입력해도 실제로는 아무것도 편집할 수 없는 버그가 있었다. 위 코드에 `renderStudentList()`/`renderNoticeGeneral()` 호출을 추가해 고쳤다.
 
 `css/app.css`에 편집모드 표시용 스타일을 추가한다:
 
@@ -1288,8 +1296,11 @@ function renderStudentList() {
     todo.value = (daily.todos && daily.todos[String(student.no)]) || '';
     todo.disabled = !window.__EDIT_MODE__;
     todo.addEventListener('change', () => {
-      const nextTodos = { ...daily.todos, [String(student.no)]: todo.value };
-      saveDaily({ todos: nextTodos });
+      // 로컬 daily.todos를 펼쳐서 통째로 저장하면, 학생 여러 명의 할일을
+      // Firestore 응답이 오기 전에 연달아 수정할 때 먼저 쓴 값이 나중 쓰기에
+      // 덮여 사라질 수 있다(경쟁 조건). 점 표기 필드 경로로 그 학생의 항목만
+      // 갱신하면 Firestore가 서버 쪽에서 병합해 다른 학생의 할일은 안전하다.
+      saveDaily({ [`todos.${student.no}`]: todo.value });
     });
 
     row.append(name, role, todo);
