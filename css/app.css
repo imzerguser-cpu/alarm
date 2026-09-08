@@ -149,3 +149,5 @@ body.edit-mode .student-add-form { display: flex; }
 }
 .timer-display.done { color: #e74c3c; }
 .timer-controls { display: flex; gap: 6px; }
+
+.toolbar button:disabled { background: #333; color: #777; cursor: not-allowed; }

@@ -211,3 +211,18 @@ wireTimerWidget({
   pauseBtn: document.getElementById('timerPauseBtn'),
   resetBtn: document.getElementById('timerResetBtn'),
 });
+
+import { wireFloatingWidgetButton } from './floating-widget.js';
+
+wireFloatingWidgetButton({
+  buttonEl: document.getElementById('floatingWidgetBtn'),
+  messageEl: document.getElementById('floatingWidgetMessage'),
+  getContent: () => ({
+    time: document.getElementById('clockNow').textContent,
+    period: (() => {
+      const current = document.querySelector('.timetable-row.current .tt-subject');
+      return current ? current.textContent : '';
+    })(),
+    timer: document.getElementById('timerDisplay').textContent,
+  }),
+});
