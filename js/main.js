@@ -178,3 +178,13 @@ wireExcelInput({
     saveRoster(merged);
   },
 });
+
+document.getElementById('hiclassCopyBtn').addEventListener('click', async () => {
+  const text = formatHiClassText(daily.generalNotice, roster, daily.todos);
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('클립보드에 복사했습니다. 하이클래스에 붙여넣어 주세요.');
+  } catch (err) {
+    alert('클립보드 복사에 실패했습니다. 브라우저 권한을 확인해주세요.');
+  }
+});
