@@ -1,12 +1,20 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import {
-  getFirestore, doc, setDoc, getDoc, onSnapshot,
+  initializeFirestore, persistentLocalCache, persistentSingleTabManager,
+  doc, setDoc, getDoc, onSnapshot,
 } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 import { shouldResetDaily } from './daily-reset.js';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+// IndexedDB에 오프라인 캐시를 켜둔다 — 이게 없으면 오프라인 중에 쓴 내용은
+// 메모리에만 있다가 탭을 닫으면 그대로 사라진다. 켜두면 오프라인 중 저장도
+// 기기에 남아 있다가 다시 연결되면 자동으로 서버에 반영된다. 태블릿 한 대
+// 에서만 여는 게 기본이라 persistentSingleTabManager로 충분하다(여러 탭을
+// 동시에 열 계획이면 나중에 멀티탭 매니저로 바꾸면 된다).
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() }),
+});
 
 export { shouldResetDaily };
 
