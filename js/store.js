@@ -57,7 +57,9 @@ export async function ensureTodayDaily(todayDateKey) {
   const snap = await getDoc(ref);
   const current = snap.exists() ? snap.data() : null;
   if (!current || shouldResetDaily(current.date, todayDateKey)) {
-    const fresh = { date: todayDateKey, morningNotice: '', generalNotice: '', todos: {} };
+    const fresh = {
+      date: todayDateKey, morningNotice: '', generalNotice: '', todos: {}, submits: {},
+    };
     await setDoc(ref, fresh);
     return fresh;
   }

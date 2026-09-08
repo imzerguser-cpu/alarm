@@ -9,11 +9,13 @@
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Malgun Gothic', sans-serif; background: #0e1420; color: #fff; }
-    .bell-wrap { max-width: 900px; margin: 0 auto; padding: 24px 20px 80px; }
-    .bell-wrap h1 { text-align: center; font-size: 1.4rem; color: #ffcc00; margin-bottom: 20px; }
+    .bell-wrap {
+      background: #1a2233; border-radius: 14px; padding: 20px;
+    }
+    .bell-wrap h1 { text-align: center; font-size: 1.3rem; color: #ffcc00; margin: 0 0 16px; }
 
     .clock-card {
-      background: #1a2233; border-radius: 16px; padding: 16px; text-align: center; margin-bottom: 20px;
+      background: #0e1420; border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 16px;
     }
     #nextAlarmInfo { margin-top: 8px; font-size: 1.1rem; color: #ffcc00; min-height: 1.4em; }
 
@@ -65,7 +67,10 @@
       font-weight: bold; cursor: pointer;
     }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- defer: 이 파일이 꽤 커서 head에서 그냥 두면 화면 전체 렌더링을 막는다.
+       엑셀 업로드 버튼을 실제로 누르기 전까지는 필요 없으므로 백그라운드로
+       내려받고 페이지 그리기는 먼저 하도록 defer를 붙인다. -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
   <div id="alarmBanner" class="alarm-banner">
@@ -85,7 +90,7 @@
       <div id="morningBannerText"></div>
     </div>
 
-    <div class="main-row">
+    <div class="three-col-row">
       <section id="studentSection" class="student-section">
         <div id="studentList" class="student-list"></div>
         <div id="studentAddForm" class="student-add-form">
@@ -93,6 +98,39 @@
           <input id="studentAddNameInput" type="text" placeholder="학생 이름">
           <button id="studentAddBtn">+ 학생 추가</button>
         </div>
+      </section>
+
+      <section class="center-section">
+        <div class="bell-wrap">
+          <h1>🔔 교실 수업 알리미</h1>
+
+          <div class="clock-card">
+            <div id="nextAlarmInfo"></div>
+          </div>
+
+          <div class="control-bar">
+            <button id="startBellBtn">▶ 알리미 시작</button>
+            <button id="stopBellBtn" disabled>⏹ 알리미 중지</button>
+            <button id="testVoiceBtn">🔊 음성 테스트</button>
+            <div id="bellStatus">알리미가 꺼져 있습니다. 시작 버튼을 눌러주세요.</div>
+          </div>
+
+          <div id="bellAdminSection" class="bell-admin-section">
+            <div class="schedule-card">
+              <h2>오늘의 알림 시간표</h2>
+              <div id="scheduleList"></div>
+              <div class="schedule-actions">
+                <button id="addRowBtn">+ 알림 추가</button>
+                <button id="saveScheduleBtn">저장</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <section id="noticeSection" class="notice-section">
+          <div id="noticeGeneralText" class="notice-general"></div>
+          <button id="hiclassCopyBtn" class="hiclass-btn">📋 하이클래스용 복사</button>
+        </section>
       </section>
 
       <aside class="timetable-col">
@@ -148,11 +186,6 @@
       </aside>
     </div>
 
-    <section id="noticeSection" class="notice-section">
-      <div id="noticeGeneralText" class="notice-general"></div>
-      <button id="hiclassCopyBtn" class="hiclass-btn">📋 하이클래스용 복사</button>
-    </section>
-
     <section class="timer-section">
       <h3 class="timer-heading">⏱ 타이머</h3>
       <div class="timer-widget">
@@ -172,32 +205,6 @@
         </div>
       </div>
     </section>
-
-    <div class="bell-wrap">
-      <h1>🔔 교실 수업 알리미</h1>
-
-      <div id="bellAdminSection" class="bell-admin-section">
-        <div class="clock-card">
-          <div id="nextAlarmInfo"></div>
-        </div>
-
-        <div class="control-bar">
-          <button id="startBellBtn">▶ 알리미 시작</button>
-          <button id="stopBellBtn" disabled>⏹ 알리미 중지</button>
-          <button id="testVoiceBtn">🔊 음성 테스트</button>
-          <div id="bellStatus">알리미가 꺼져 있습니다. 시작 버튼을 눌러주세요.</div>
-        </div>
-
-        <div class="schedule-card">
-          <h2>오늘의 알림 시간표</h2>
-          <div id="scheduleList"></div>
-          <div class="schedule-actions">
-            <button id="addRowBtn">+ 알림 추가</button>
-            <button id="saveScheduleBtn">저장</button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
   <div class="toolbar">

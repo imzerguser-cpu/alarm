@@ -142,7 +142,17 @@ import { isMorningActive } from './schedule-times.js';
 import { INITIAL_ROSTER } from './seed-data.js';
 
 let roster = INITIAL_ROSTER;
-let daily = { date: toDateKey(new Date()), morningNotice: '', generalNotice: '', todos: {} };
+let daily = {
+  date: toDateKey(new Date()), morningNotice: '', generalNotice: '', todos: {}, submits: {},
+};
+
+// daily의 한 필드(todos 또는 submits) 안에서 이 학생 항목 하나만 갱신한다.
+// 점 표기 문자열 키가 아니라 실제 중첩 객체로 넘겨야 setDoc(...,{merge:true})가
+// 재귀적으로 병합해 다른 학생의 값을 그대로 보존한다(점 표기 키는 updateDoc
+// 에서만 경로로 해석된다 — 이걸 착각해서 한 번 버그가 났던 자리).
+function saveStudentField(fieldName, studentNo, value) {
+  saveDaily({ [fieldName]: { [String(studentNo)]: value } });
+}
 
 function renderStudentList() {
   const container = document.getElementById('studentList');
@@ -157,7 +167,7 @@ function renderStudentList() {
     row.className = 'student-row';
     row.dataset.no = String(student.no);
 
-    const name = document.createElement('span');
+    const name = document.createElement('div');
     name.className = 's-name';
     name.textContent = `${student.no}. ${student.name}`;
 
@@ -177,21 +187,20 @@ function renderStudentList() {
     const todo = document.createElement('input');
     todo.className = 's-todo';
     todo.type = 'text';
-    todo.placeholder = '해야할일 / 제출할 것';
+    todo.placeholder = '해야할일';
     todo.value = (daily.todos && daily.todos[String(student.no)]) || '';
     todo.disabled = !window.__EDIT_MODE__;
-    todo.addEventListener('change', () => {
-      // 로컬 daily.todos를 펼쳐서 통째로 저장하면, 학생 여러 명의 할일을
-      // Firestore 응답이 오기 전에 연달아 수정할 때 먼저 쓴 값이 나중 쓰기에
-      // 덮여 사라질 수 있다(경쟁 조건). setDoc(..., {merge:true})는 중첩 객체를
-      // 재귀적으로 병합하므로(점 표기 문자열 키가 아니라 실제 중첩 객체로 넘겨야
-      // 함 — 점 표기 키는 updateDoc에서만 경로로 해석되고 setDoc+merge에서는
-      // 점이 포함된 하나의 리터럴 필드명으로 취급된다), todos 필드 안의 이
-      // 학생 항목만 갱신되고 다른 학생의 값은 그대로 보존된다.
-      saveDaily({ todos: { [String(student.no)]: todo.value } });
-    });
+    todo.addEventListener('change', () => saveStudentField('todos', student.no, todo.value));
 
-    row.append(name, role, todo);
+    const submit = document.createElement('input');
+    submit.className = 's-submit';
+    submit.type = 'text';
+    submit.placeholder = '제출할것';
+    submit.value = (daily.submits && daily.submits[String(student.no)]) || '';
+    submit.disabled = !window.__EDIT_MODE__;
+    submit.addEventListener('change', () => saveStudentField('submits', student.no, submit.value));
+
+    row.append(name, role, todo, submit);
     container.appendChild(row);
   }
 }
@@ -318,7 +327,7 @@ wireExcelInput({
 });
 
 document.getElementById('hiclassCopyBtn').addEventListener('click', async () => {
-  const text = formatHiClassText(daily.generalNotice, roster, daily.todos);
+  const text = formatHiClassText(daily.generalNotice, roster, daily.todos, daily.submits);
   try {
     await navigator.clipboard.writeText(text);
     alert('클립보드에 복사했습니다. 하이클래스에 붙여넣어 주세요.');

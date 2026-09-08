@@ -7,20 +7,40 @@ const students = [
 ];
 
 describe('formatHiClassText', () => {
-  it('includes the general notice followed by a blank line and per-student todos', () => {
-    const text = formatHiClassText('내일 준비물: 색연필', students, { 1: '수학익힘 3쪽', 2: '' });
+  it('includes the general notice followed by a blank line and per-student todo/submit lines', () => {
+    const text = formatHiClassText(
+      '내일 준비물: 색연필',
+      students,
+      { 1: '수학익힘 3쪽', 2: '' },
+      { 1: '', 2: '가정통신문' },
+    );
     expect(text).toBe(
-      '내일 준비물: 색연필\n\n[오늘의 할 일]\n1. 김하늘 - 수학익힘 3쪽\n2. 이도윤 - (없음)'
+      '내일 준비물: 색연필\n\n[오늘의 할 일]\n'
+      + '1. 김하늘 - 해야할일: 수학익힘 3쪽 / 제출할것: (없음)\n'
+      + '2. 이도윤 - 해야할일: (없음) / 제출할것: 가정통신문',
     );
   });
 
   it('omits the notice block entirely when generalNotice is empty', () => {
-    const text = formatHiClassText('', students, { 1: '', 2: '' });
-    expect(text).toBe('[오늘의 할 일]\n1. 김하늘 - (없음)\n2. 이도윤 - (없음)');
+    const text = formatHiClassText('', students, { 1: '', 2: '' }, { 1: '', 2: '' });
+    expect(text).toBe(
+      '[오늘의 할 일]\n'
+      + '1. 김하늘 - 해야할일: (없음) / 제출할것: (없음)\n'
+      + '2. 이도윤 - 해야할일: (없음) / 제출할것: (없음)',
+    );
   });
 
   it('trims whitespace from the general notice', () => {
-    const text = formatHiClassText('  공지  ', [], {});
+    const text = formatHiClassText('  공지  ', [], {}, {});
     expect(text.startsWith('공지\n\n')).toBe(true);
+  });
+
+  it('defaults todos/submits to empty when omitted entirely', () => {
+    const text = formatHiClassText('', students);
+    expect(text).toBe(
+      '[오늘의 할 일]\n'
+      + '1. 김하늘 - 해야할일: (없음) / 제출할것: (없음)\n'
+      + '2. 이도윤 - 해야할일: (없음) / 제출할것: (없음)',
+    );
   });
 });

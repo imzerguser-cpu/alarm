@@ -30,12 +30,18 @@ export function renderTimetable(container, rows) {
   for (const row of rows) {
     const el = document.createElement('div');
     el.className = 'timetable-row' + (row.isCurrent ? ' current' : '');
+
+    // 시간 위에 줄바꿔서 교시(예: "1교시")가 오는 왼쪽 묶음.
+    const left = document.createElement('span');
+    left.className = 'tt-left';
     const time = document.createElement('span');
     time.className = 'tt-time';
     time.textContent = row.time;
     const label = document.createElement('span');
     label.className = 'tt-label';
     label.textContent = row.label;
+    left.append(time, label);
+
     const subject = document.createElement('span');
     subject.className = 'tt-subject';
     const subjectText = document.createElement('span');
@@ -50,7 +56,8 @@ export function renderTimetable(container, rows) {
       note.textContent = row.note;
       subject.appendChild(note);
     }
-    el.append(time, label, subject);
+
+    el.append(left, subject);
     container.appendChild(el);
   }
 }

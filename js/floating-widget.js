@@ -5,7 +5,7 @@ export function isDocumentPipSupported(win) {
 export async function openFloatingWidget({ getContent }) {
   if (!isDocumentPipSupported(window)) return null;
 
-  const pipWindow = await window.documentPictureInPicture.requestWindow({ width: 300, height: 220 });
+  const pipWindow = await window.documentPictureInPicture.requestWindow({ width: 300, height: 260 });
 
   const style = pipWindow.document.createElement('style');
   style.textContent = `
@@ -17,6 +17,14 @@ export async function openFloatingWidget({ getContent }) {
     .fw-period { color: #ffcc00; margin-top: 4px; font-size: 1.1rem; font-weight: bold; }
     .fw-next { margin-top: 6px; font-size: 0.8rem; color: #9aa7bd; }
     .fw-timer { margin-top: 4px; font-size: 1.1rem; }
+    .fw-controls { margin-top: 8px; display: flex; gap: 8px; }
+    .fw-controls button {
+      padding: 6px 12px; border-radius: 8px; border: none; cursor: pointer;
+      font-weight: bold; font-size: 0.85rem;
+    }
+    #fwStartBtn { background: #2ecc71; color: #062; }
+    #fwStopBtn { background: #555; color: #fff; }
+    .fw-controls button:disabled { background: #333; color: #777; cursor: not-allowed; }
   `;
   pipWindow.document.head.appendChild(style);
 
@@ -27,8 +35,20 @@ export async function openFloatingWidget({ getContent }) {
     <div class="fw-period" id="fwPeriod"></div>
     <div class="fw-next" id="fwNext"></div>
     <div class="fw-timer" id="fwTimer"></div>
+    <div class="fw-controls">
+      <button id="fwStartBtn">▶ 시작</button>
+      <button id="fwStopBtn">⏹ 중지</button>
+    </div>
   `;
   pipWindow.document.body.appendChild(root);
+
+  const startBtn = pipWindow.document.getElementById('fwStartBtn');
+  const stopBtn = pipWindow.document.getElementById('fwStopBtn');
+  // window.classBell은 js/bell.js가 노출하는 최소 창구다(같은 window를 공유
+  // 하므로 여기서도 그대로 호출된다). 혹시 bell.js가 아직 로드되기 전이면
+  // 버튼을 눌러도 조용히 아무 일도 안 하도록 존재 여부만 확인한다.
+  startBtn.addEventListener('click', () => window.classBell && window.classBell.start());
+  stopBtn.addEventListener('click', () => window.classBell && window.classBell.stop());
 
   const update = () => {
     const content = getContent();
@@ -37,6 +57,9 @@ export async function openFloatingWidget({ getContent }) {
     pipWindow.document.getElementById('fwPeriod').textContent = content.period;
     pipWindow.document.getElementById('fwNext').textContent = content.nextAlarm;
     pipWindow.document.getElementById('fwTimer').textContent = content.timer;
+    const running = window.classBell ? window.classBell.isRunning() : false;
+    startBtn.disabled = running;
+    stopBtn.disabled = !running;
   };
   update();
   const intervalId = setInterval(update, 1000);

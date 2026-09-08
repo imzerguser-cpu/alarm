@@ -269,10 +269,18 @@
   updateRunningBadge();
   // 화면 상단의 시계와 "다음 알림" 표시는 관리자 모드 여부와 무관하게 항상
   // 최신이어야 한다(학생이 보는 화면에도 큰 시계가 계속 가야 하고, PC 플로팅
-  // 위젯도 #nextAlarmInfo의 텍스트를 그대로 읽는다 — 다만 그 원소 자체는
-  // #bellAdminSection 안에 있어 관리자 모드가 아니면 화면에는 안 보인다).
-  // 그래서 시계 틱은 "시작" 버튼과 별개로 항상 돌리고, 실제 음성 알림 여부만
-  // running 플래그로 checkAlarms() 안에서 켜고 끈다.
+  // 위젯도 #nextAlarmInfo의 텍스트를 그대로 읽는다). 시작/중지/음성테스트
+  // 버튼도 이제 항상 화면에 보이므로, 시계 틱은 그 버튼 상태와 별개로 항상
+  // 돌리고, 실제 음성 알림 여부만 running 플래그로 checkAlarms() 안에서 켜고 끈다.
   tickTimer = setInterval(tick, 1000);
   tick();
+
+  // PC 플로팅 위젯(js/floating-widget.js)에서도 시작/중지 버튼을 쓸 수 있도록
+  // 최소한의 창구만 열어둔다. Document Picture-in-Picture 창은 이 페이지와
+  // 같은 자바스크립트 실행 환경(같은 window)을 공유하므로 그대로 호출된다.
+  window.classBell = {
+    start: startBell,
+    stop: stopBell,
+    isRunning: () => running,
+  };
 })();

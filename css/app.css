@@ -17,33 +17,34 @@
 }
 .morning-banner[hidden] { display: none; }
 
-/* 학생 목록(왼쪽)과 시간표(오른쪽)를 나란히 배치 */
-.main-row {
+/* 왼쪽 30% 학생 / 가운데 40% 수업 알리미·알림장 / 오른쪽 30% 시간표 */
+.three-col-row {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: 30% 40% 30%;
   gap: 16px;
   align-items: start;
 }
-@media (max-width: 800px) {
-  .main-row { grid-template-columns: 1fr; }
+@media (max-width: 900px) {
+  .three-col-row { grid-template-columns: 1fr; }
 }
+
+.center-section { display: flex; flex-direction: column; gap: 16px; }
 
 .student-section {
   background: #1a2233; border-radius: 14px; padding: 20px;
 }
-.student-list { display: flex; flex-direction: column; gap: 8px; }
+.student-list { display: flex; flex-direction: column; gap: 14px; }
+/* 학생 한 명 = 이름 줄 + 1인1역/해야할일/제출할것 세 줄이 세로로 이어진다. */
 .student-row {
-  display: flex; align-items: center; gap: 10px; background: #0e1420;
-  border-radius: 8px; padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 6px; background: #0e1420;
+  border-radius: 8px; padding: 10px 12px;
 }
-.student-row .s-name { width: 70px; font-weight: bold; color: #ffcc00; flex-shrink: 0; }
-.student-row .s-role {
-  width: 90px; min-width: 0; flex-shrink: 0; color: #9aa7bd; font-size: 0.85rem;
-  background: transparent; border: none; border-bottom: 1px solid #2a344a; padding: 4px;
-}
-.student-row .s-todo {
-  flex: 1; min-width: 0; background: transparent; color: #fff; border: none;
-  border-bottom: 1px solid #2a344a; padding: 4px;
+.student-row .s-name { font-weight: bold; color: #ffcc00; font-size: 1.1rem; }
+.student-row .s-role,
+.student-row .s-todo,
+.student-row .s-submit {
+  width: 100%; color: #fff; font-size: 0.9rem;
+  background: transparent; border: none; border-bottom: 1px solid #2a344a; padding: 4px 2px;
 }
 
 .notice-section {
@@ -66,24 +67,31 @@
   background: #1a2233; border-radius: 14px; padding: 14px;
   display: flex; flex-direction: column; gap: 8px;
 }
+/* 시간+교시(왼쪽, 위아래로 줄바꿈)와 과목(오른쪽)을 같은 글씨 크기로 맞추고,
+   전체를 오른쪽 30% 칸 안에서 가운데 정렬한다. */
 .timetable-row {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
+  display: flex;
   align-items: center;
-  column-gap: 14px;
-  padding: 14px 16px;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+  padding: 14px 12px;
   border-radius: 10px;
   background: #0e1420;
 }
 .timetable-row.current { background: #ffcc00; color: #111; }
-.timetable-row .tt-time { grid-column: 1; grid-row: 1; font-size: 0.95rem; color: #9aa7bd; }
+.timetable-row .tt-left {
+  display: flex; flex-direction: column; align-items: center; line-height: 1.3;
+}
+.timetable-row .tt-time,
+.timetable-row .tt-label,
+.timetable-row .tt-subject-text {
+  font-size: 1.2rem; font-weight: bold;
+}
+.timetable-row .tt-time { color: #9aa7bd; font-weight: normal; }
 .timetable-row.current .tt-time { color: #333; }
-.timetable-row .tt-label { grid-column: 1; grid-row: 2; font-size: 1rem; font-weight: bold; }
 .timetable-row .tt-subject {
-  grid-column: 2; grid-row: 1 / span 2;
-  display: flex; flex-direction: column; justify-content: center;
-  font-size: 1.5rem; font-weight: bold; line-height: 1.3;
+  display: flex; flex-direction: column; align-items: center; line-height: 1.3;
 }
 .timetable-row .tt-note {
   font-size: 0.85rem; font-weight: normal; color: #9aa7bd; margin-top: 2px;
@@ -198,6 +206,7 @@ body.edit-mode .student-add-form { display: flex; }
 
 .toolbar button:disabled { background: #333; color: #777; cursor: not-allowed; }
 
-/* 관리자 모드에서만 기존 수업종 알리미(시작/중지/음성테스트, 알림 시간표)를 보여준다. */
+/* 알리미 켜기/끄기/음성테스트는 누구나 상시 사용하고, 알림 시간·문구를
+   고치는 목록만 관리자 모드에서만 보이게 한다. */
 #bellAdminSection { display: none; }
 body.edit-mode #bellAdminSection { display: block; }
