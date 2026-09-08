@@ -3,13 +3,12 @@ import {
   getFirestore, doc, setDoc, getDoc, onSnapshot,
 } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
+import { shouldResetDaily } from './daily-reset.js';
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
-export function shouldResetDaily(storedDateKey, todayDateKey) {
-  return storedDateKey !== todayDateKey;
-}
+export { shouldResetDaily };
 
 export function subscribeSchedule(callback) {
   return onSnapshot(doc(db, 'schedule', 'weekly'), { includeMetadataChanges: true }, (snap) => {

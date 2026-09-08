@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shouldResetDaily } from '../js/store.js';
+import { shouldResetDaily } from '../js/daily-reset.js';
 
 describe('shouldResetDaily', () => {
   it('returns true when stored date differs from today', () => {
