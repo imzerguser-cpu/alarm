@@ -1298,9 +1298,12 @@ function renderStudentList() {
     todo.addEventListener('change', () => {
       // 로컬 daily.todos를 펼쳐서 통째로 저장하면, 학생 여러 명의 할일을
       // Firestore 응답이 오기 전에 연달아 수정할 때 먼저 쓴 값이 나중 쓰기에
-      // 덮여 사라질 수 있다(경쟁 조건). 점 표기 필드 경로로 그 학생의 항목만
-      // 갱신하면 Firestore가 서버 쪽에서 병합해 다른 학생의 할일은 안전하다.
-      saveDaily({ [`todos.${student.no}`]: todo.value });
+      // 덮여 사라질 수 있다(경쟁 조건). setDoc(..., {merge:true})는 중첩 객체를
+      // 재귀적으로 병합하므로(점 표기 문자열 키가 아니라 실제 중첩 객체로 넘겨야
+      // 함 — 점 표기 키는 updateDoc에서만 경로로 해석되고 setDoc+merge에서는
+      // 점이 포함된 하나의 리터럴 필드명으로 취급된다), todos 필드 안의 이
+      // 학생 항목만 갱신되고 다른 학생의 값은 그대로 보존된다.
+      saveDaily({ todos: { [String(student.no)]: todo.value } });
     });
 
     row.append(name, role, todo);
