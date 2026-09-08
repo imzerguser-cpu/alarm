@@ -1,7 +1,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
-  doc, setDoc, getDoc, onSnapshot,
+  doc, setDoc, getDoc,
 } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 import { shouldResetDaily } from './daily-reset.js';
@@ -9,19 +9,21 @@ import { shouldResetDaily } from './daily-reset.js';
 const app = initializeApp(firebaseConfig);
 // IndexedDB에 오프라인 캐시를 켜둔다 — 이게 없으면 오프라인 중에 쓴 내용은
 // 메모리에만 있다가 탭을 닫으면 그대로 사라진다. 켜두면 오프라인 중 저장도
-// 기기에 남아 있다가 다시 연결되면 자동으로 서버에 반영된다. 태블릿 한 대
-// 에서만 여는 게 기본이라 persistentSingleTabManager로 충분하다(여러 탭을
-// 동시에 열 계획이면 나중에 멀티탭 매니저로 바꾸면 된다).
+// 기기에 남아 있다가 다시 연결되면 자동으로 서버에 반영된다.
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() }),
 });
 
 export { shouldResetDaily };
 
-export function subscribeSchedule(callback, onError) {
-  return onSnapshot(doc(db, 'schedule', 'weekly'), { includeMetadataChanges: true }, (snap) => {
-    callback(snap.exists() ? snap.data() : {}, snap.metadata.fromCache);
-  }, onError);
+// 편집은 항상 이 화면(태블릿)에서만 한다는 전제로, 실시간 구독(onSnapshot)
+// 대신 페이지를 열 때 한 번만 불러온다. 편집한 내용은 저장할 때 화면에도
+// 바로 반영하므로(main.js) 구독 없이도 화면은 항상 최신이다. 다른 기기에서
+// 편집했다면 이 화면은 다시 열어야 반영된다 — 그 대신 계속 연결을 붙들고
+// 있지 않아도 되니 훨씬 단순하고, 배터리·데이터도 덜 쓴다.
+export async function fetchSchedule() {
+  const snap = await getDoc(doc(db, 'schedule', 'weekly'));
+  return { data: snap.exists() ? snap.data() : {}, fromCache: snap.metadata.fromCache };
 }
 
 export function saveSchedule(weeklyData) {
@@ -30,30 +32,22 @@ export function saveSchedule(weeklyData) {
 
 // 교시별 과목 아래에 교사가 덧붙이는 세부 내용(선택 사항). schedule/weekly와
 // 같은 요일→교시 키 구조를 쓰지만, 값이 있는 교시만 채워지는 성긴(sparse) 문서다.
-export function subscribeScheduleNotes(callback, onError) {
-  return onSnapshot(doc(db, 'schedule', 'notes'), { includeMetadataChanges: true }, (snap) => {
-    callback(snap.exists() ? snap.data() : {}, snap.metadata.fromCache);
-  }, onError);
+export async function fetchScheduleNotes() {
+  const snap = await getDoc(doc(db, 'schedule', 'notes'));
+  return { data: snap.exists() ? snap.data() : {}, fromCache: snap.metadata.fromCache };
 }
 
 export function saveScheduleNotes(notesData) {
   return setDoc(doc(db, 'schedule', 'notes'), notesData);
 }
 
-export function subscribeRoster(callback, onError) {
-  return onSnapshot(doc(db, 'roster', 'students'), { includeMetadataChanges: true }, (snap) => {
-    callback(snap.exists() ? (snap.data().list || []) : [], snap.metadata.fromCache);
-  }, onError);
+export async function fetchRoster() {
+  const snap = await getDoc(doc(db, 'roster', 'students'));
+  return { data: snap.exists() ? (snap.data().list || []) : [], fromCache: snap.metadata.fromCache };
 }
 
 export function saveRoster(list) {
   return setDoc(doc(db, 'roster', 'students'), { list });
-}
-
-export function subscribeDaily(callback, onError) {
-  return onSnapshot(doc(db, 'daily', 'current'), { includeMetadataChanges: true }, (snap) => {
-    callback(snap.exists() ? snap.data() : null, snap.metadata.fromCache);
-  }, onError);
 }
 
 export function saveDaily(data) {

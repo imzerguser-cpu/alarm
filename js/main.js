@@ -1,10 +1,19 @@
 import { getDayKey, getCurrentPeriodId } from './schedule-times.js';
 import { buildTodayRows, renderTimetable } from './timetable.js';
-import { INITIAL_SCHEDULE } from './seed-data.js';
+import { INITIAL_SCHEDULE, INITIAL_ROSTER } from './seed-data.js';
 import { initPinLock } from './pin-lock.js';
 import {
-  subscribeSchedule, saveSchedule, subscribeScheduleNotes, saveScheduleNotes,
+  fetchSchedule, saveSchedule, fetchScheduleNotes, saveScheduleNotes,
+  fetchRoster, saveRoster, saveDaily, ensureTodayDaily,
 } from './store.js';
+import { formatHiClassText } from './notice-format.js';
+import { isMorningActive } from './schedule-times.js';
+
+// 편집은 항상 이 화면(태블릿)에서만 한다는 전제로, 실시간 구독(onSnapshot) 대신
+// 페이지를 열 때 한 번만 서버에서 불러온다(아래 loadInitialData). 저장할 때는
+// 화면도 같이 바로 갱신하므로, 계속 연결을 붙들고 있지 않아도 항상 최신이다.
+// 다른 기기에서 편집했다면 이 화면은 새로고침해야 반영된다 — 그 대신 훨씬
+// 단순하고, 배터리·데이터도 덜 쓴다.
 
 function toDateKey(date) {
   const y = date.getFullYear();
@@ -17,10 +26,10 @@ function setConnStatus(fromCache) {
   document.getElementById('connStatus').hidden = !fromCache;
 }
 
-// onSnapshot/getDoc 실패(오프라인, 권한 거부, 설정 오류 등)를 조용히 삼키지 않고
+// 불러오기 실패(오프라인, 권한 거부, 설정 오류 등)를 조용히 삼키지 않고
 // 콘솔에 남기면서 화면에도 "연결 끊김" 표시를 띄운다.
-function handleSubscribeError(err) {
-  console.error('Firestore 구독 오류:', err);
+function handleLoadError(err) {
+  console.error('Firestore 불러오기 오류:', err);
   setConnStatus(true);
 }
 
@@ -43,9 +52,15 @@ function trackSave(promise) {
     });
 }
 
+// ---- 상태 (한 번 불러온 뒤로는 저장할 때마다 여기도 같이 갱신한다) ----
 let currentSchedule = INITIAL_SCHEDULE;
 let currentNotes = {};
+let roster = INITIAL_ROSTER;
+let daily = {
+  date: toDateKey(new Date()), morningNotice: '', generalNotice: '', todos: {}, submits: {},
+};
 
+// ---- 렌더 함수 ----
 function renderTimetableNow() {
   const now = new Date();
   const dayKey = getDayKey(now);
@@ -53,13 +68,97 @@ function renderTimetableNow() {
   const rows = buildTodayRows(currentSchedule, dayKey, currentPeriodId, currentNotes);
   renderTimetable(document.getElementById('timetablePanel'), rows);
 }
-// Firestore 응답을 기다리지 않고 우선 기본값(INITIAL_SCHEDULE)으로 바로 그린다.
-// 응답이 오면 그 값으로 다시 그려진다 — 이게 없으면 응답이 오기 전까지(또는
-// Firebase가 아직 설정 전이라 응답이 늦어지는 동안) 화면이 잠깐 비어 보인다.
-renderTimetableNow();
 
-// 시간표 편집 폼 배선 — subscribeScheduleNotes의 콜백이 이 아래 선언들을
-// 참조하므로(구독 등록보다 먼저 정의해야 TDZ 걱정 없이 안전하다), 구독보다 위에 둔다.
+function renderStudentList() {
+  const container = document.getElementById('studentList');
+  // 포커스가 목록 안에 있는 동안에는 다시 그리지 않는다 — 편집모드 토글처럼
+  // 다른 이유로 렌더가 다시 불릴 때, 교사가 입력 중이던 글자를 지우지 않기 위해서다.
+  if (container.contains(document.activeElement)) return;
+  container.innerHTML = '';
+  for (const student of roster) {
+    const row = document.createElement('div');
+    row.className = 'student-row';
+    row.dataset.no = String(student.no);
+
+    const name = document.createElement('div');
+    name.className = 's-name';
+    name.textContent = `${student.no}. ${student.name}`;
+
+    const role = document.createElement('input');
+    role.className = 's-role';
+    role.type = 'text';
+    role.placeholder = '1인1역';
+    role.value = student.role || '';
+    role.disabled = !window.__EDIT_MODE__;
+    role.addEventListener('change', () => {
+      // role은 daily가 아니라 roster 배열에 있으므로, 해당 학생 항목만 교체한
+      // 전체 배열을 saveRoster로 저장한다. 로컬 roster도 즉시 갱신해서
+      // 하이클래스 복사 등 다른 기능이 최신 값을 읽게 한다.
+      roster = roster.map((s) => (s.no === student.no ? { ...s, role: role.value } : s));
+      trackSave(saveRoster(roster));
+    });
+
+    const todo = document.createElement('input');
+    todo.className = 's-todo';
+    todo.type = 'text';
+    todo.placeholder = '해야할일';
+    todo.value = (daily.todos && daily.todos[String(student.no)]) || '';
+    todo.disabled = !window.__EDIT_MODE__;
+    todo.addEventListener('change', () => saveStudentField('todos', student.no, todo.value));
+
+    const submit = document.createElement('input');
+    submit.className = 's-submit';
+    submit.type = 'text';
+    submit.placeholder = '제출할것';
+    submit.value = (daily.submits && daily.submits[String(student.no)]) || '';
+    submit.disabled = !window.__EDIT_MODE__;
+    submit.addEventListener('change', () => saveStudentField('submits', student.no, submit.value));
+
+    row.append(name, role, todo, submit);
+    container.appendChild(row);
+  }
+}
+
+function renderNoticeGeneral() {
+  const el = document.getElementById('noticeGeneralText');
+  if (document.activeElement !== el) {
+    el.textContent = daily.generalNotice || '';
+  }
+  el.contentEditable = window.__EDIT_MODE__ ? 'true' : 'false';
+}
+
+function renderMorningBanner() {
+  const banner = document.getElementById('morningBanner');
+  const textEl = document.getElementById('morningBannerText');
+  const withinWindow = isMorningActive(new Date());
+  // 편집모드에서는 시간대·내용과 무관하게 배너를 띄운다 — 그래야 아직 비어 있거나
+  // 아침활동 시간이 아닐 때도 교사가 눌러서 입력할 대상이 화면에 존재한다.
+  const active = window.__EDIT_MODE__ || (withinWindow && !!daily.morningNotice);
+  banner.hidden = !active;
+  textEl.contentEditable = window.__EDIT_MODE__ ? 'true' : 'false';
+  if (active && document.activeElement !== textEl) {
+    textEl.textContent = daily.morningNotice || '';
+  }
+}
+
+// daily의 한 필드(todos 또는 submits) 안에서 이 학생 항목 하나만 갱신한다.
+// 점 표기 문자열 키가 아니라 실제 중첩 객체로 넘겨야 setDoc(...,{merge:true})가
+// 재귀적으로 병합해 다른 학생의 값을 그대로 보존한다(점 표기 키는 updateDoc
+// 에서만 경로로 해석된다 — 이걸 착각해서 한 번 버그가 났던 자리). 로컬 daily도
+// 같이 갱신해서 하이클래스 복사 등이 방금 입력한 값을 바로 읽게 한다.
+function saveStudentField(fieldName, studentNo, value) {
+  daily = { ...daily, [fieldName]: { ...daily[fieldName], [String(studentNo)]: value } };
+  trackSave(saveDaily({ [fieldName]: { [String(studentNo)]: value } }));
+}
+
+// 기본값으로 우선 화면을 바로 채운다 — 응답을 기다리면(또는 Firebase가 아직
+// 설정 전이라 응답이 아예 안 오면) 그동안 화면이 비어 보인다.
+renderTimetableNow();
+renderStudentList();
+renderNoticeGeneral();
+renderMorningBanner();
+
+// ---- 시간표 편집 폼 배선 ----
 const subjectPreset = document.getElementById('ttEditSubjectPreset');
 const subjectCustom = document.getElementById('ttEditSubjectCustom');
 const ttEditDaySelect = document.getElementById('ttEditDay');
@@ -74,8 +173,6 @@ subjectPreset.addEventListener('change', () => {
 // 이게 없으면 "과목만 바꾸고 싶었는데 적용을 누르니 세부 내용이 빈 값으로
 // 덮어써져 사라지는" 일이 생긴다 — 항상 지금 칸에 보이는 값 그대로 다시
 // 저장하기 때문에, 이 값 자체가 항상 최신 상태를 반영해야 안전하다.
-// 다만 스냅샷 echo로 다시 호출될 때 교사가 이 칸에 한창 입력 중이면 건드리지
-// 않는다 — 알림장/안내문에 이미 쓰던 것과 같은 보호 패턴이다.
 function syncNoteField() {
   if (document.activeElement === ttEditNoteInput) return;
   const day = ttEditDaySelect.value;
@@ -84,25 +181,6 @@ function syncNoteField() {
 }
 ttEditDaySelect.addEventListener('change', syncNoteField);
 ttEditPeriodSelect.addEventListener('change', syncNoteField);
-
-subscribeSchedule((data, fromCache) => {
-  currentSchedule = Object.keys(data).length ? data : INITIAL_SCHEDULE;
-  // 캐시에서 온 빈 스냅샷(오프라인/콜드 스타트)으로 시드를 덮어쓰면, 교사가
-  // 편집해 둔 서버의 실제 시간표가 재연결 시 초기값으로 되돌아간다.
-  // 서버에서 확인된 빈 문서일 때만 시드를 업로드한다.
-  if (!Object.keys(data).length && !fromCache) {
-    trackSave(saveSchedule(INITIAL_SCHEDULE)); // 최초 1회 시드 업로드
-  }
-  renderTimetableNow();
-}, handleSubscribeError);
-
-subscribeScheduleNotes((data) => {
-  currentNotes = data || {};
-  renderTimetableNow();
-  syncNoteField();
-}, handleSubscribeError);
-
-setInterval(renderTimetableNow, 30000);
 
 document.getElementById('ttEditApplyBtn').addEventListener('click', () => {
   const day = ttEditDaySelect.value;
@@ -116,15 +194,20 @@ document.getElementById('ttEditApplyBtn').addEventListener('click', () => {
   } else {
     subject = subjectPreset.value;
   }
-  const next = { ...currentSchedule, [day]: { ...currentSchedule[day], [period]: subject } };
-  trackSave(saveSchedule(next));
+  currentSchedule = { ...currentSchedule, [day]: { ...currentSchedule[day], [period]: subject } };
+  trackSave(saveSchedule(currentSchedule));
 
   // 세부 내용은 선택 사항이라 비워두면 그냥 과목명만 보이던 대로 유지된다.
   const noteValue = ttEditNoteInput.value.trim();
-  const nextNotes = { ...currentNotes, [day]: { ...currentNotes[day], [period]: noteValue } };
-  trackSave(saveScheduleNotes(nextNotes));
+  currentNotes = { ...currentNotes, [day]: { ...currentNotes[day], [period]: noteValue } };
+  trackSave(saveScheduleNotes(currentNotes));
+
+  renderTimetableNow();
 });
 
+setInterval(renderTimetableNow, 30000);
+
+// ---- 관리자 PIN ----
 // 관리자 화면(엑셀 업로드, PIN 변경 등)에서 바꿀 수 있도록 localStorage에
 // 저장해두고, 없으면 기본값 '1234'를 쓴다. let인 이유는 changePinBtn 클릭
 // 시 바로 바뀌어야 하기 때문 — pin-lock.js에는 getCorrectPin 함수로 넘겨서
@@ -188,140 +271,21 @@ document.getElementById('changePinBtn').addEventListener('click', () => {
   alert('이 기기(브라우저)에서 PIN이 변경되었습니다. 다른 태블릿/PC에서는 각각 따로 바꿔야 합니다.');
 });
 
-import {
-  subscribeRoster, saveRoster, subscribeDaily, saveDaily, ensureTodayDaily,
-} from './store.js';
-import { formatHiClassText } from './notice-format.js';
-import { isMorningActive } from './schedule-times.js';
-import { INITIAL_ROSTER } from './seed-data.js';
-
-let roster = INITIAL_ROSTER;
-let daily = {
-  date: toDateKey(new Date()), morningNotice: '', generalNotice: '', todos: {}, submits: {},
-};
-
-// daily의 한 필드(todos 또는 submits) 안에서 이 학생 항목 하나만 갱신한다.
-// 점 표기 문자열 키가 아니라 실제 중첩 객체로 넘겨야 setDoc(...,{merge:true})가
-// 재귀적으로 병합해 다른 학생의 값을 그대로 보존한다(점 표기 키는 updateDoc
-// 에서만 경로로 해석된다 — 이걸 착각해서 한 번 버그가 났던 자리).
-function saveStudentField(fieldName, studentNo, value) {
-  trackSave(saveDaily({ [fieldName]: { [String(studentNo)]: value } }));
-}
-
-function renderStudentList() {
-  const container = document.getElementById('studentList');
-  // 스냅샷이 올 때마다 목록을 통째로 다시 그리면(자기 자신의 쓰기 echo 포함),
-  // 교사가 입력 중이던 아직 저장 안 된 글자가 지워진다. 포커스가 목록 안에 있는
-  // 동안에는 다시 그리지 않는다 — 포커스를 잃는 순간(blur/change) 이미 저장되므로
-  // 그 다음 스냅샷에서 안전하게 갱신된다.
-  if (container.contains(document.activeElement)) return;
-  container.innerHTML = '';
-  for (const student of roster) {
-    const row = document.createElement('div');
-    row.className = 'student-row';
-    row.dataset.no = String(student.no);
-
-    const name = document.createElement('div');
-    name.className = 's-name';
-    name.textContent = `${student.no}. ${student.name}`;
-
-    const role = document.createElement('input');
-    role.className = 's-role';
-    role.type = 'text';
-    role.placeholder = '1인1역';
-    role.value = student.role || '';
-    role.disabled = !window.__EDIT_MODE__;
-    role.addEventListener('change', () => {
-      // role은 daily가 아니라 roster 배열에 있으므로, 해당 학생 항목만 교체한
-      // 전체 배열을 saveRoster로 저장한다.
-      const nextRoster = roster.map((s) => (s.no === student.no ? { ...s, role: role.value } : s));
-      trackSave(saveRoster(nextRoster));
-    });
-
-    const todo = document.createElement('input');
-    todo.className = 's-todo';
-    todo.type = 'text';
-    todo.placeholder = '해야할일';
-    todo.value = (daily.todos && daily.todos[String(student.no)]) || '';
-    todo.disabled = !window.__EDIT_MODE__;
-    todo.addEventListener('change', () => saveStudentField('todos', student.no, todo.value));
-
-    const submit = document.createElement('input');
-    submit.className = 's-submit';
-    submit.type = 'text';
-    submit.placeholder = '제출할것';
-    submit.value = (daily.submits && daily.submits[String(student.no)]) || '';
-    submit.disabled = !window.__EDIT_MODE__;
-    submit.addEventListener('change', () => saveStudentField('submits', student.no, submit.value));
-
-    row.append(name, role, todo, submit);
-    container.appendChild(row);
-  }
-}
-renderStudentList(); // 위와 같은 이유로 기본 명단(INITIAL_ROSTER)을 바로 그린다.
-
-function renderNoticeGeneral() {
-  const el = document.getElementById('noticeGeneralText');
-  // 편집 중(포커스가 이 요소에 있음)에는 덮어쓰지 않는다.
-  if (document.activeElement !== el) {
-    el.textContent = daily.generalNotice || '';
-  }
-  el.contentEditable = window.__EDIT_MODE__ ? 'true' : 'false';
-}
-
-function renderMorningBanner() {
-  const banner = document.getElementById('morningBanner');
-  const textEl = document.getElementById('morningBannerText');
-  const withinWindow = isMorningActive(new Date());
-  // 편집모드에서는 시간대·내용과 무관하게 배너를 띄운다 — 그래야 아직 비어 있거나
-  // 아침활동 시간이 아닐 때도 교사가 눌러서 입력할 대상이 화면에 존재한다.
-  // 편집모드가 아닐 때는 기존 규칙(아침활동 시간 + 내용 있음) 그대로.
-  const active = window.__EDIT_MODE__ || (withinWindow && !!daily.morningNotice);
-  banner.hidden = !active;
-  textEl.contentEditable = window.__EDIT_MODE__ ? 'true' : 'false';
-  if (active && document.activeElement !== textEl) {
-    textEl.textContent = daily.morningNotice || '';
-  }
-}
-renderNoticeGeneral(); // 위와 같은 이유로 빈 기본값으로 바로 그린다.
-renderMorningBanner();
-
+// ---- 알림장 상단 안내문 ----
 // contentEditable에서 Enter는 <div>/<br>을 만든다. textContent는 그 사이에 아무
 // 구분자도 넣지 않아 여러 줄이 한 줄로 뭉개지므로, 실제 줄바꿈을 보존하는
 // innerText를 쓴다(CSS white-space: pre-wrap과 formatHiClassText가 \n을 전제).
 document.getElementById('noticeGeneralText').addEventListener('blur', (e) => {
   if (!window.__EDIT_MODE__) return;
+  daily = { ...daily, generalNotice: e.target.innerText };
   trackSave(saveDaily({ generalNotice: e.target.innerText }));
 });
 
 document.getElementById('morningBannerText').addEventListener('blur', (e) => {
   if (!window.__EDIT_MODE__) return;
+  daily = { ...daily, morningNotice: e.target.innerText };
   trackSave(saveDaily({ morningNotice: e.target.innerText }));
 });
-
-subscribeRoster((list, fromCache) => {
-  roster = list.length ? list : INITIAL_ROSTER;
-  // 학생 명단도 시간표와 같은 규칙: 서버에서 확인된 빈 문서일 때만 시드를 올린다.
-  if (!list.length && !fromCache) {
-    trackSave(saveRoster(INITIAL_ROSTER));
-  }
-  setConnStatus(fromCache);
-  renderStudentList();
-}, handleSubscribeError);
-
-// 구독 등록은 시드 점검(ensureTodayDaily) 성공 여부와 분리한다. 오프라인 콜드
-// 스타트로 getDoc이 실패하면, 예전에는 subscribeDaily가 아예 등록되지 않아
-// 알림장이 영영 렌더링되지 않았다.
-subscribeDaily((data, fromCache) => {
-  if (!data) return;
-  daily = data;
-  setConnStatus(fromCache);
-  renderStudentList();
-  renderNoticeGeneral();
-  renderMorningBanner();
-}, handleSubscribeError);
-
-ensureTodayDaily(toDateKey(new Date())).catch(handleSubscribeError);
 
 // 태블릿이 자정을 넘겨 계속 켜져 있어도 날짜 변경을 감지해 daily를 새로 초기화한다.
 let lastCheckedDateKey = toDateKey(new Date());
@@ -330,10 +294,18 @@ setInterval(() => {
   const nowKey = toDateKey(new Date());
   if (nowKey !== lastCheckedDateKey) {
     lastCheckedDateKey = nowKey;
-    ensureTodayDaily(nowKey).catch(handleSubscribeError);
+    ensureTodayDaily(nowKey)
+      .then((fresh) => {
+        daily = fresh;
+        renderStudentList();
+        renderNoticeGeneral();
+        renderMorningBanner();
+      })
+      .catch(handleLoadError);
   }
 }, 15000);
 
+// ---- 학생 직접 추가 ----
 document.getElementById('studentAddBtn').addEventListener('click', () => {
   if (!window.__EDIT_MODE__) return;
   const nameInput = document.getElementById('studentAddNameInput');
@@ -353,12 +325,14 @@ document.getElementById('studentAddBtn').addEventListener('click', () => {
   }
   // 번호를 직접 골라 넣을 수 있으니, 그 번호가 목록 중간이어도 순서대로
   // 보이도록 저장 전에 번호순으로 정렬한다.
-  const next = [...roster, { no, name, role: '' }].sort((a, b) => a.no - b.no);
-  trackSave(saveRoster(next));
+  roster = [...roster, { no, name, role: '' }].sort((a, b) => a.no - b.no);
+  trackSave(saveRoster(roster));
+  renderStudentList();
   nameInput.value = '';
   noInput.value = '';
 });
 
+// ---- 엑셀 업로드 ----
 import { wireExcelInput } from './excel-import.js';
 
 wireExcelInput({
@@ -372,14 +346,16 @@ wireExcelInput({
       return;
     }
     // 기존 1인1역(role) 값은 이름이 같으면 유지
-    const merged = list.map((s) => {
+    roster = list.map((s) => {
       const prev = roster.find((r) => r.name === s.name);
       return prev ? { ...s, role: prev.role } : s;
     });
-    trackSave(saveRoster(merged));
+    trackSave(saveRoster(roster));
+    renderStudentList();
   },
 });
 
+// ---- 하이클래스 복사 ----
 document.getElementById('hiclassCopyBtn').addEventListener('click', async () => {
   const text = formatHiClassText(daily.generalNotice, roster, daily.todos, daily.submits);
   try {
@@ -390,6 +366,7 @@ document.getElementById('hiclassCopyBtn').addEventListener('click', async () => 
   }
 });
 
+// ---- PWA 설치 ----
 import { wireInstallButton } from './pwa-install.js';
 
 wireInstallButton({
@@ -401,6 +378,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
 }
 
+// ---- 타이머 ----
 import { wireTimerWidget } from './timer.js';
 
 wireTimerWidget({
@@ -413,6 +391,7 @@ wireTimerWidget({
   resetBtn: document.getElementById('timerResetBtn'),
 });
 
+// ---- PC 플로팅 위젯 ----
 import { wireFloatingWidgetButton } from './floating-widget.js';
 
 wireFloatingWidgetButton({
@@ -432,3 +411,55 @@ wireFloatingWidgetButton({
     };
   },
 });
+
+// ---- 초기 데이터 한 번 불러오기 ----
+// 여기서부터는 위에서 정의한 모든 렌더 함수·상태·이벤트 배선이 끝난 뒤이므로
+// (이 함수는 맨 마지막에 호출된다) 어떤 순서 문제도 없다.
+async function loadInitialData() {
+  try {
+    const { data, fromCache } = await fetchSchedule();
+    currentSchedule = Object.keys(data).length ? data : INITIAL_SCHEDULE;
+    // 캐시에서 온 빈 응답(오프라인/콜드 스타트)으로 시드를 덮어쓰면, 교사가
+    // 편집해 둔 서버의 실제 시간표가 재연결 시 초기값으로 되돌아간다.
+    // 서버에서 확인된 빈 문서일 때만 시드를 업로드한다.
+    if (!Object.keys(data).length && !fromCache) {
+      trackSave(saveSchedule(INITIAL_SCHEDULE));
+    }
+  } catch (err) {
+    handleLoadError(err);
+  }
+
+  try {
+    const { data } = await fetchScheduleNotes();
+    currentNotes = data || {};
+  } catch (err) {
+    handleLoadError(err);
+  }
+  renderTimetableNow();
+  syncNoteField();
+
+  try {
+    const { data: list, fromCache } = await fetchRoster();
+    roster = list.length ? list : INITIAL_ROSTER;
+    if (!list.length && !fromCache) {
+      trackSave(saveRoster(INITIAL_ROSTER));
+    }
+    // roster는 daily와 함께 교사가 매일 들여다보는 데이터라, 이 값이 캐시(오프라인)
+    // 에서 왔는지를 "연결 끊김" 표시의 기준으로 삼는다 — 성공(서버 응답)이면 지운다.
+    setConnStatus(fromCache);
+  } catch (err) {
+    handleLoadError(err);
+  }
+  renderStudentList();
+
+  try {
+    daily = await ensureTodayDaily(toDateKey(new Date()));
+  } catch (err) {
+    handleLoadError(err);
+  }
+  renderStudentList();
+  renderNoticeGeneral();
+  renderMorningBanner();
+}
+
+loadInitialData();
