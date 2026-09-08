@@ -76,6 +76,7 @@
     <header class="top-clock">
       <div id="clockNow">00:00:00</div>
       <div id="clockDate"></div>
+      <span id="connStatus" class="conn-status" hidden>⚠ 연결 끊김 — 마지막으로 받은 내용을 보여주고 있어요</span>
     </header>
 
     <div id="morningBanner" class="morning-banner" hidden>
@@ -86,6 +87,10 @@
       <section id="noticeBoard" class="notice-board">
         <div id="noticeGeneralText" class="notice-general"></div>
         <div id="studentList" class="student-list"></div>
+        <div id="studentAddForm" class="student-add-form">
+          <input id="studentAddNameInput" type="text" placeholder="학생 이름">
+          <button id="studentAddBtn">+ 학생 추가</button>
+        </div>
         <button id="hiclassCopyBtn" class="hiclass-btn">📋 하이클래스용 복사</button>
       </section>
 
