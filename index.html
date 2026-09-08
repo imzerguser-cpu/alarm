@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>교실 수업 알리미</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Malgun Gothic', sans-serif; background: #0e1420; color: #fff; }
+    .bell-wrap { max-width: 900px; margin: 0 auto; padding: 24px 20px 80px; }
+    .bell-wrap h1 { text-align: center; font-size: 1.4rem; color: #ffcc00; margin-bottom: 20px; }
+
+    .clock-card {
+      background: #1a2233; border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 20px;
+    }
+    #clockNow { font-size: 3.2rem; font-weight: bold; letter-spacing: 2px; }
+    #clockDate { color: #9aa7bd; margin-top: 4px; }
+    #nextAlarmInfo { margin-top: 16px; font-size: 1.1rem; color: #ffcc00; min-height: 1.4em; }
+
+    .control-bar {
+      display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
+    }
+    .control-bar button {
+      padding: 12px 22px; border-radius: 10px; border: none; font-weight: bold; font-size: 1rem; cursor: pointer;
+    }
+    #startBellBtn { background: #2ecc71; color: #062; }
+    #stopBellBtn { background: #555; color: #fff; }
+    #testVoiceBtn { background: #4285F4; color: #fff; }
+    #bellStatus { font-size: 0.95rem; color: #9aa7bd; width: 100%; text-align: center; margin-top: 4px; }
+    #bellStatus.on { color: #2ecc71; }
+
+    .schedule-card { background: #1a2233; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+    .schedule-card h2 { margin: 0 0 14px; font-size: 1.05rem; color: #ffcc00; }
+    .schedule-row {
+      display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #2a344a; flex-wrap: wrap;
+    }
+    .schedule-row:last-child { border-bottom: none; }
+    .schedule-row input[type="time"] {
+      width: 140px; padding: 8px; border-radius: 8px; border: 1px solid #3a4864; background: #0e1420; color: #fff;
+    }
+    .schedule-row input[type="text"] {
+      flex: 1; min-width: 220px; padding: 8px; border-radius: 8px; border: 1px solid #3a4864; background: #0e1420; color: #fff;
+    }
+    .schedule-row button {
+      padding: 8px 12px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem;
+    }
+    .row-test-btn { background: #4285F4; color: #fff; }
+    .row-del-btn { background: #e74c3c; color: #fff; }
+
+    .schedule-actions { display: flex; gap: 10px; margin-top: 16px; }
+    #addRowBtn { background: #34495e; color: #fff; }
+    #saveScheduleBtn { background: #ffcc00; color: #111; }
+    .schedule-actions button {
+      padding: 10px 18px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer;
+    }
+
+    .alarm-banner {
+      position: fixed; left: 0; right: 0; top: 0; padding: 30px 20px; text-align: center;
+      background: #ffcc00; color: #111; font-size: 1.6rem; font-weight: bold; z-index: 999;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3); display: none;
+    }
+    .alarm-banner.show { display: block; }
+    .alarm-banner button {
+      margin-top: 14px; padding: 8px 16px; border-radius: 8px; border: none; background: #111; color: #ffcc00;
+      font-weight: bold; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="alarmBanner" class="alarm-banner">
+    <div id="alarmBannerText"></div>
+    <button id="alarmBannerCloseBtn">닫기</button>
+  </div>
+
+  <div class="bell-wrap">
+    <h1>🔔 교실 수업 알리미</h1>
+
+    <div class="clock-card">
+      <div id="clockNow">00:00:00</div>
+      <div id="clockDate"></div>
+      <div id="nextAlarmInfo"></div>
+    </div>
+
+    <div class="control-bar">
+      <button id="startBellBtn">▶ 알리미 시작</button>
+      <button id="stopBellBtn" disabled>⏹ 알리미 중지</button>
+      <button id="testVoiceBtn">🔊 음성 테스트</button>
+      <div id="bellStatus">알리미가 꺼져 있습니다. 시작 버튼을 눌러주세요.</div>
+    </div>
+
+    <div class="schedule-card">
+      <h2>오늘의 알림 시간표</h2>
+      <div id="scheduleList"></div>
+      <div class="schedule-actions">
+        <button id="addRowBtn">+ 알림 추가</button>
+        <button id="saveScheduleBtn">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/bell.js"></script>
+</body>
+</html>
