@@ -33,7 +33,14 @@
   // 시작/중지 버튼은 관리자 모드에서만 보이는데, 상태를 기억해두지 않으면
   // 새로고침·태블릿 재부팅마다 알리미가 꺼진 채로 돌아오고 아무도(학생도
   // 교사도) 그 사실을 알 방법이 없다. localStorage에 기억해뒀다가 그대로 이어간다.
-  let running = localStorage.getItem(RUNNING_KEY) === 'true';
+  let running = false;
+  try {
+    running = localStorage.getItem(RUNNING_KEY) === 'true';
+  } catch (err) {
+    // 사파리 콘텐츠 차단 등으로 localStorage 접근 자체가 막힌 환경에서도
+    // (loadSchedule/loadFiredToday와 같은 방식으로) 여기서 멈추지 않고 "꺼짐"
+    // 기본값으로 계속 진행한다 — 그래야 학생용 시계가 죽지 않는다.
+  }
   let tickTimer = null;
   let bannerHideTimer = null;
 
