@@ -49,6 +49,7 @@ subscribeSchedule((data, fromCache) => {
 subscribeScheduleNotes((data) => {
   currentNotes = data || {};
   renderTimetableNow();
+  syncNoteField();
 }, handleSubscribeError);
 
 setInterval(renderTimetableNow, 30000);
@@ -56,12 +57,29 @@ setInterval(renderTimetableNow, 30000);
 // 시간표 편집 폼 배선
 const subjectPreset = document.getElementById('ttEditSubjectPreset');
 const subjectCustom = document.getElementById('ttEditSubjectCustom');
+const ttEditDaySelect = document.getElementById('ttEditDay');
+const ttEditPeriodSelect = document.getElementById('ttEditPeriod');
+const ttEditNoteInput = document.getElementById('ttEditNote');
+
 subjectPreset.addEventListener('change', () => {
   subjectCustom.hidden = subjectPreset.value !== '__custom';
 });
+
+// 요일/교시를 바꿀 때마다 그 교시에 이미 저장된 세부 내용을 입력칸에 채워준다.
+// 이게 없으면 "과목만 바꾸고 싶었는데 적용을 누르니 세부 내용이 빈 값으로
+// 덮어써져 사라지는" 일이 생긴다 — 항상 지금 칸에 보이는 값 그대로 다시
+// 저장하기 때문에, 이 값 자체가 항상 최신 상태를 반영해야 안전하다.
+function syncNoteField() {
+  const day = ttEditDaySelect.value;
+  const period = ttEditPeriodSelect.value;
+  ttEditNoteInput.value = (currentNotes[day] && currentNotes[day][period]) || '';
+}
+ttEditDaySelect.addEventListener('change', syncNoteField);
+ttEditPeriodSelect.addEventListener('change', syncNoteField);
+
 document.getElementById('ttEditApplyBtn').addEventListener('click', () => {
-  const day = document.getElementById('ttEditDay').value;
-  const period = document.getElementById('ttEditPeriod').value;
+  const day = ttEditDaySelect.value;
+  const period = ttEditPeriodSelect.value;
   let subject;
   if (subjectPreset.value === '__clear') {
     subject = ''; // 해당 교시 비우기(시간표에서 사라짐)
@@ -75,11 +93,9 @@ document.getElementById('ttEditApplyBtn').addEventListener('click', () => {
   saveSchedule(next);
 
   // 세부 내용은 선택 사항이라 비워두면 그냥 과목명만 보이던 대로 유지된다.
-  const noteInput = document.getElementById('ttEditNote');
-  const noteValue = noteInput.value.trim();
+  const noteValue = ttEditNoteInput.value.trim();
   const nextNotes = { ...currentNotes, [day]: { ...currentNotes[day], [period]: noteValue } };
   saveScheduleNotes(nextNotes);
-  noteInput.value = '';
 });
 
 const EDIT_PIN = '1234'; // TODO: 원하는 PIN으로 바꾸세요.
@@ -261,7 +277,9 @@ document.getElementById('studentAddBtn').addEventListener('click', () => {
     alert(`이미 ${no}번 학생이 있습니다. 다른 번호를 입력해주세요.`);
     return;
   }
-  const next = [...roster, { no, name, role: '' }];
+  // 번호를 직접 골라 넣을 수 있으니, 그 번호가 목록 중간이어도 순서대로
+  // 보이도록 저장 전에 번호순으로 정렬한다.
+  const next = [...roster, { no, name, role: '' }].sort((a, b) => a.no - b.no);
   saveRoster(next);
   nameInput.value = '';
   noInput.value = '';

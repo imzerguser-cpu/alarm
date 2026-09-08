@@ -79,7 +79,10 @@
     if (!koreanVoices.length) return null;
     // Web Speech API는 성별 정보를 따로 주지 않아 이름으로 추정할 수밖에 없다.
     // "Microsoft InJoon"처럼 이름에 남성을 암시하는 표현이 있으면 그걸 우선한다.
-    const maleHint = koreanVoices.find((v) => /male|남성|injoon/i.test(v.name));
+    // "male"만 보면 "Female"에도 걸리므로 여성을 암시하는 이름은 먼저 제외한다.
+    const maleHint = koreanVoices.find(
+      (v) => /male|남성|injoon/i.test(v.name) && !/female|여성/i.test(v.name),
+    );
     return maleHint || koreanVoices[0];
   }
 
@@ -160,8 +163,6 @@
     if (running) return;
     running = true;
     speak('교실 수업 알리미를 시작합니다.');
-    tickTimer = setInterval(tick, 1000);
-    tick();
     startBtn.disabled = true;
     stopBtn.disabled = false;
     bellStatusEl.textContent = '알리미가 작동 중입니다.';
@@ -170,8 +171,6 @@
 
   function stopBell() {
     running = false;
-    clearInterval(tickTimer);
-    tickTimer = null;
     startBtn.disabled = false;
     stopBtn.disabled = true;
     bellStatusEl.textContent = '알리미가 꺼져 있습니다. 시작 버튼을 눌러주세요.';
@@ -234,5 +233,10 @@
   }
 
   renderSchedule();
-  updateClock();
+  // 화면 상단의 시계와 "다음 알림" 표시는 관리자 모드 여부와 무관하게 항상
+  // 최신이어야 한다(학생이 보는 화면에도 큰 시계가 계속 가야 하고, PC 플로팅
+  // 위젯도 이 값을 그대로 읽는다). 그래서 시계 틱은 "시작" 버튼과 별개로 항상
+  // 돌리고, 실제 음성 알림 여부만 running 플래그로 checkAlarms() 안에서 켜고 끈다.
+  tickTimer = setInterval(tick, 1000);
+  tick();
 })();

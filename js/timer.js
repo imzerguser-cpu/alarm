@@ -20,7 +20,9 @@ function pickKoreanVoice() {
   const voices = window.speechSynthesis.getVoices();
   const koreanVoices = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith('ko'));
   if (!koreanVoices.length) return null;
-  const maleHint = koreanVoices.find((v) => /male|남성|injoon/i.test(v.name));
+  const maleHint = koreanVoices.find(
+    (v) => /male|남성|injoon/i.test(v.name) && !/female|여성/i.test(v.name),
+  );
   return maleHint || koreanVoices[0];
 }
 
