@@ -147,6 +147,11 @@ body.edit-mode #morningBannerText {
 }
 body.edit-mode .timetable-edit-form { display: flex; }
 
+.bell-running-status {
+  display: block; margin-top: 4px; font-size: 0.85rem; color: #e74c3c;
+}
+.bell-running-status.on { color: #2ecc71; }
+
 .conn-status { display: block; margin-top: 4px; font-size: 0.85rem; color: #e74c3c; }
 .conn-status[hidden] { display: none; }
 /* 좁은 화면(교실 태블릿)에서는 편집모드가 아니면 연결 끊김 경고를 숨긴다 —

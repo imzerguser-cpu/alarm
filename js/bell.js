@@ -1,6 +1,7 @@
 (function () {
   const STORAGE_KEY = 'classBellSchedule';
   const FIRED_KEY = 'classBellFired';
+  const RUNNING_KEY = 'classBellRunning';
 
   const DEFAULT_SCHEDULE = [
     { time: '08:45', message: '교실 청소, 자리 정리를 하고 가정통신문을 확인해서 제출하세요.' },
@@ -16,6 +17,7 @@
   const clockNowEl = document.getElementById('clockNow');
   const clockDateEl = document.getElementById('clockDate');
   const nextAlarmInfoEl = document.getElementById('nextAlarmInfo');
+  const bellRunningStatusEl = document.getElementById('bellRunningStatus');
   const startBtn = document.getElementById('startBellBtn');
   const stopBtn = document.getElementById('stopBellBtn');
   const testVoiceBtn = document.getElementById('testVoiceBtn');
@@ -28,9 +30,19 @@
   const alarmBannerCloseBtn = document.getElementById('alarmBannerCloseBtn');
 
   let schedule = loadSchedule();
-  let running = false;
+  // 시작/중지 버튼은 관리자 모드에서만 보이는데, 상태를 기억해두지 않으면
+  // 새로고침·태블릿 재부팅마다 알리미가 꺼진 채로 돌아오고 아무도(학생도
+  // 교사도) 그 사실을 알 방법이 없다. localStorage에 기억해뒀다가 그대로 이어간다.
+  let running = localStorage.getItem(RUNNING_KEY) === 'true';
   let tickTimer = null;
   let bannerHideTimer = null;
+
+  // 관리자 모드가 아니어도 항상 보이는 자리(상단 시계 옆)에 켜짐/꺼짐을 표시한다.
+  function updateRunningBadge() {
+    if (!bellRunningStatusEl) return;
+    bellRunningStatusEl.textContent = running ? '🔔 알리미 켜짐' : '🔕 알리미 꺼짐';
+    bellRunningStatusEl.classList.toggle('on', running);
+  }
 
   function loadSchedule() {
     try {
@@ -162,19 +174,23 @@
   function startBell() {
     if (running) return;
     running = true;
+    localStorage.setItem(RUNNING_KEY, 'true');
     speak('교실 수업 알리미를 시작합니다.');
     startBtn.disabled = true;
     stopBtn.disabled = false;
     bellStatusEl.textContent = '알리미가 작동 중입니다.';
     bellStatusEl.classList.add('on');
+    updateRunningBadge();
   }
 
   function stopBell() {
     running = false;
+    localStorage.setItem(RUNNING_KEY, 'false');
     startBtn.disabled = false;
     stopBtn.disabled = true;
     bellStatusEl.textContent = '알리미가 꺼져 있습니다. 시작 버튼을 눌러주세요.';
     bellStatusEl.classList.remove('on');
+    updateRunningBadge();
   }
 
   function renderSchedule() {
@@ -233,10 +249,23 @@
   }
 
   renderSchedule();
+  // 새로고침/재부팅 후에도 켜져 있던 상태 그대로 이어간다. HTML은 "꺼짐"을
+  // 기본값으로 그려두므로, 실제로 켜져 있었다면 버튼·문구를 그 상태로 맞춘다.
+  // speak()는 호출하지 않는다 — 페이지가 막 열린 시점에 사용자 동작 없이
+  // 음성을 재생하면 브라우저가 막을 수 있고, 굳이 매번 안내할 필요도 없다.
+  if (running) {
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    bellStatusEl.textContent = '알리미가 작동 중입니다.';
+    bellStatusEl.classList.add('on');
+  }
+  updateRunningBadge();
   // 화면 상단의 시계와 "다음 알림" 표시는 관리자 모드 여부와 무관하게 항상
   // 최신이어야 한다(학생이 보는 화면에도 큰 시계가 계속 가야 하고, PC 플로팅
-  // 위젯도 이 값을 그대로 읽는다). 그래서 시계 틱은 "시작" 버튼과 별개로 항상
-  // 돌리고, 실제 음성 알림 여부만 running 플래그로 checkAlarms() 안에서 켜고 끈다.
+  // 위젯도 #nextAlarmInfo의 텍스트를 그대로 읽는다 — 다만 그 원소 자체는
+  // #bellAdminSection 안에 있어 관리자 모드가 아니면 화면에는 안 보인다).
+  // 그래서 시계 틱은 "시작" 버튼과 별개로 항상 돌리고, 실제 음성 알림 여부만
+  // running 플래그로 checkAlarms() 안에서 켜고 끈다.
   tickTimer = setInterval(tick, 1000);
   tick();
 })();

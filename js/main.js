@@ -35,6 +35,33 @@ function renderTimetableNow() {
   renderTimetable(document.getElementById('timetablePanel'), rows);
 }
 
+// 시간표 편집 폼 배선 — subscribeScheduleNotes의 콜백이 이 아래 선언들을
+// 참조하므로(구독 등록보다 먼저 정의해야 TDZ 걱정 없이 안전하다), 구독보다 위에 둔다.
+const subjectPreset = document.getElementById('ttEditSubjectPreset');
+const subjectCustom = document.getElementById('ttEditSubjectCustom');
+const ttEditDaySelect = document.getElementById('ttEditDay');
+const ttEditPeriodSelect = document.getElementById('ttEditPeriod');
+const ttEditNoteInput = document.getElementById('ttEditNote');
+
+subjectPreset.addEventListener('change', () => {
+  subjectCustom.hidden = subjectPreset.value !== '__custom';
+});
+
+// 요일/교시를 바꿀 때마다 그 교시에 이미 저장된 세부 내용을 입력칸에 채워준다.
+// 이게 없으면 "과목만 바꾸고 싶었는데 적용을 누르니 세부 내용이 빈 값으로
+// 덮어써져 사라지는" 일이 생긴다 — 항상 지금 칸에 보이는 값 그대로 다시
+// 저장하기 때문에, 이 값 자체가 항상 최신 상태를 반영해야 안전하다.
+// 다만 스냅샷 echo로 다시 호출될 때 교사가 이 칸에 한창 입력 중이면 건드리지
+// 않는다 — 알림장/안내문에 이미 쓰던 것과 같은 보호 패턴이다.
+function syncNoteField() {
+  if (document.activeElement === ttEditNoteInput) return;
+  const day = ttEditDaySelect.value;
+  const period = ttEditPeriodSelect.value;
+  ttEditNoteInput.value = (currentNotes[day] && currentNotes[day][period]) || '';
+}
+ttEditDaySelect.addEventListener('change', syncNoteField);
+ttEditPeriodSelect.addEventListener('change', syncNoteField);
+
 subscribeSchedule((data, fromCache) => {
   currentSchedule = Object.keys(data).length ? data : INITIAL_SCHEDULE;
   // 캐시에서 온 빈 스냅샷(오프라인/콜드 스타트)으로 시드를 덮어쓰면, 교사가
@@ -53,29 +80,6 @@ subscribeScheduleNotes((data) => {
 }, handleSubscribeError);
 
 setInterval(renderTimetableNow, 30000);
-
-// 시간표 편집 폼 배선
-const subjectPreset = document.getElementById('ttEditSubjectPreset');
-const subjectCustom = document.getElementById('ttEditSubjectCustom');
-const ttEditDaySelect = document.getElementById('ttEditDay');
-const ttEditPeriodSelect = document.getElementById('ttEditPeriod');
-const ttEditNoteInput = document.getElementById('ttEditNote');
-
-subjectPreset.addEventListener('change', () => {
-  subjectCustom.hidden = subjectPreset.value !== '__custom';
-});
-
-// 요일/교시를 바꿀 때마다 그 교시에 이미 저장된 세부 내용을 입력칸에 채워준다.
-// 이게 없으면 "과목만 바꾸고 싶었는데 적용을 누르니 세부 내용이 빈 값으로
-// 덮어써져 사라지는" 일이 생긴다 — 항상 지금 칸에 보이는 값 그대로 다시
-// 저장하기 때문에, 이 값 자체가 항상 최신 상태를 반영해야 안전하다.
-function syncNoteField() {
-  const day = ttEditDaySelect.value;
-  const period = ttEditPeriodSelect.value;
-  ttEditNoteInput.value = (currentNotes[day] && currentNotes[day][period]) || '';
-}
-ttEditDaySelect.addEventListener('change', syncNoteField);
-ttEditPeriodSelect.addEventListener('change', syncNoteField);
 
 document.getElementById('ttEditApplyBtn').addEventListener('click', () => {
   const day = ttEditDaySelect.value;
