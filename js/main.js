@@ -188,3 +188,14 @@ document.getElementById('hiclassCopyBtn').addEventListener('click', async () => 
     alert('클립보드 복사에 실패했습니다. 브라우저 권한을 확인해주세요.');
   }
 });
+
+import { wireInstallButton } from './pwa-install.js';
+
+wireInstallButton({
+  buttonEl: document.getElementById('installBtn'),
+  messageEl: document.getElementById('installMessage'),
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+}
