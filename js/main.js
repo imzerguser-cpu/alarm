@@ -546,10 +546,14 @@ wireFloatingWidgetButton({
   messageEl: document.getElementById('floatingWidgetMessage'),
   getContent: () => {
     const currentRow = document.querySelector('.timetable-row.current');
+    const now = new Date();
     return {
       date: document.getElementById('clockDate').textContent,
       time: document.getElementById('clockNow').textContent,
       period: currentRow ? currentRow.querySelector('.tt-subject-text').textContent.trim() : '쉬는 시간',
+      // 전자칠판 한 구석에 계속 띄워두고 볼 용도라, 현재 교시 한 줄이 아니라
+      // 오늘 시간표 전체를 그대로 넘긴다(본 화면과 같은 buildTodayRows 결과).
+      rows: buildTodayRows(currentSchedule, getDayKey(now), getCurrentPeriodId(now), currentNotes, daily.periodOverrides),
       nextAlarm: document.getElementById('nextAlarmInfo').textContent,
       timer: document.getElementById('timerDisplay').textContent,
       // 본 화면의 "연결 끊김" 표시와 같은 값을 그대로 읽어서 플로팅 창에도
