@@ -32,7 +32,6 @@ export async function openFloatingWidget({ getContent }) {
     .fw-row .fw-row-subject { flex: 1; text-align: right; }
 
     .fw-footer { flex: none; padding: 6px 8px 10px; }
-    .fw-timer { font-size: 1rem; margin-bottom: 4px; }
     .fw-controls { display: flex; gap: 8px; justify-content: center; }
     .fw-controls button {
       padding: 6px 12px; border-radius: 8px; border: none; cursor: pointer;
@@ -54,7 +53,6 @@ export async function openFloatingWidget({ getContent }) {
     </div>
     <div class="fw-timetable" id="fwTimetable"></div>
     <div class="fw-footer">
-      <div class="fw-timer" id="fwTimer"></div>
       <div class="fw-controls">
         <button id="fwStartBtn">▶ 시작</button>
         <button id="fwStopBtn">⏹ 중지</button>
@@ -88,7 +86,6 @@ export async function openFloatingWidget({ getContent }) {
     pipWindow.document.getElementById('fwDate').textContent = content.date;
     pipWindow.document.getElementById('fwTime').textContent = content.time;
     pipWindow.document.getElementById('fwNext').textContent = content.nextAlarm;
-    pipWindow.document.getElementById('fwTimer').textContent = content.timer;
     pipWindow.document.getElementById('fwConn').hidden = !content.connLost;
     renderRows(content.rows);
     const running = window.classBell ? window.classBell.isRunning() : false;
