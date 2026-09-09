@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>오늘 시간표</title>
+  <link rel="manifest" href="manifest-display.json">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    /* 태블릿에 화면 고정(키오스크)해두고 시간표만 보여주기 위한 전용 화면.
+       index.html과 같은 GitHub Pages 출처(origin)라서 localStorage(수업종
+       알림 시간)와 Firestore(시간표) 둘 다 index.html과 자동으로 공유된다
+       — 이 페이지만 따로 로그인하거나 설정할 필요가 없다. */
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Malgun Gothic', sans-serif; background: #0e1420; color: #fff; }
+    .display-wrap { max-width: 480px; margin: 0 auto; padding: 10px 10px 24px; }
+
+    .control-bar {
+      display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+      padding: 10px; margin-bottom: 10px; background: #1a2233; border-radius: 10px;
+    }
+    .control-bar button {
+      padding: 8px 14px; border-radius: 8px; border: none; font-weight: bold; font-size: 0.85rem; cursor: pointer;
+    }
+    #startBellBtn { background: #2ecc71; color: #062; }
+    #stopBellBtn { background: #555; color: #fff; }
+    #testVoiceBtn { background: #4285F4; color: #fff; }
+    #clockNow { font-size: 1rem; font-weight: bold; }
+    #clockDate { font-size: 0.78rem; color: #9aa7bd; }
+    #nextAlarmInfo { width: 100%; text-align: center; font-size: 0.8rem; color: #ffcc00; margin-top: 2px; }
+    #bellStatus, #bellRunningStatus { display: none; } /* 배지 문구 없이도 시작/중지 버튼만으로 충분 */
+    #connStatusDisplay { text-align: center; font-size: 0.75rem; color: #ff6b6b; margin-bottom: 8px; }
+    #connStatusDisplay[hidden] { display: none; }
+
+    /* 알림 시간 편집 UI는 이 화면에서는 안 보이게 한다 — 시간 편집은
+       index.html(컴퓨터)에서만 하고, 여기는 보여주기 전용이다. bell.js는
+       이 요소들이 DOM에 존재해야 오류 없이 동작하므로 지우지 않고 숨긴다. */
+    .bell-schedule-hidden { display: none !important; }
+
+    .timetable-panel .timetable-row { font-size: 1.05em; }
+
+    .alarm-banner {
+      position: fixed; left: 0; right: 0; top: 0; padding: 30px 20px; text-align: center;
+      background: #ffcc00; color: #111; font-size: 1.6rem; font-weight: bold; z-index: 999;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3); display: none;
+    }
+    .alarm-banner.show { display: block; }
+    .alarm-banner button {
+      margin-top: 14px; padding: 8px 16px; border-radius: 8px; border: none; background: #111; color: #ffcc00;
+      font-weight: bold; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="alarmBanner" class="alarm-banner">
+    <div id="alarmBannerText"></div>
+    <button id="alarmBannerCloseBtn">닫기</button>
+  </div>
+
+  <div class="display-wrap">
+    <div class="control-bar">
+      <button id="startBellBtn">▶ 시작</button>
+      <button id="stopBellBtn" disabled>⏹ 중지</button>
+      <button id="testVoiceBtn">🔊 테스트</button>
+      <span id="clockNow">00:00:00</span>
+      <span id="clockDate"></span>
+      <span id="bellRunningStatus" class="bell-running-status"></span>
+      <div id="nextAlarmInfo"></div>
+    </div>
+
+    <div id="connStatusDisplay" hidden>⚠ 시간표 서버 연결 끊김 — 마지막으로 받은 내용을 보여주고 있어요</div>
+
+    <div id="timetablePanel" class="timetable-panel"></div>
+
+    <div id="bellStatus" class="bell-schedule-hidden"></div>
+    <div id="scheduleList" class="bell-schedule-hidden"></div>
+    <button id="addRowBtn" class="bell-schedule-hidden">+</button>
+    <button id="saveScheduleBtn" class="bell-schedule-hidden">저장</button>
+  </div>
+
+  <script src="js/bell.js"></script>
+  <script type="module" src="js/tablet-display.js"></script>
+</body>
+</html>

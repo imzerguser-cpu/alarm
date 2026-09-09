@@ -132,6 +132,10 @@ body.edit-mode .admin-only-controls { display: flex; }
 }
 .install-message { color: #9aa7bd; font-size: 0.9rem; }
 .install-message.show { color: #ffcc00; }
+.toolbar-link {
+  padding: 10px 16px; border-radius: 8px; background: #34495e; color: #fff;
+  font-weight: bold; text-decoration: none; font-size: 0.9rem;
+}
 
 .pin-modal {
   position: fixed; inset: 0; background: rgba(0,0,0,0.6);
