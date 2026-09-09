@@ -200,14 +200,26 @@
     const now = new Date();
     return {
       hm: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'),
-      hms: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0')
     };
+  }
+
+  // 알림 시각 비교(checkAlarms/updateNextAlarmInfo)와 시간표 데이터는 전부
+  // 24시간 "HH:MM" 문자열을 그대로 비교하므로 그 로직은 건드리지 않는다.
+  // 여기 두 함수는 오직 "화면에 뭐라고 보여줄지"만 12시간(오전/오후)으로 바꾼다.
+  function formatTime12(hh, mm) {
+    const period = hh < 12 ? '오전' : '오후';
+    const h12 = hh % 12 === 0 ? 12 : hh % 12;
+    return `${period} ${h12}:${String(mm).padStart(2, '0')}`;
+  }
+
+  function formatTime12FromHHMM(hhmm) {
+    const [hh, mm] = hhmm.split(':').map(Number);
+    return formatTime12(hh, mm);
   }
 
   function updateClock() {
     const now = new Date();
-    const { hms } = currentHms();
-    clockNowEl.textContent = hms;
+    clockNowEl.textContent = `${formatTime12(now.getHours(), now.getMinutes())}:${String(now.getSeconds()).padStart(2, '0')}`;
     clockDateEl.textContent = now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
     updateNextAlarmInfo();
   }
@@ -221,7 +233,7 @@
       nextAlarmInfoEl.textContent = '오늘 예정된 다음 알림이 없습니다.';
       return;
     }
-    nextAlarmInfoEl.textContent = `다음 알림 ${upcoming.time} — ${upcoming.message}`;
+    nextAlarmInfoEl.textContent = `다음 알림 ${formatTime12FromHHMM(upcoming.time)} — ${upcoming.message}`;
   }
 
   function checkAlarms() {
