@@ -138,7 +138,9 @@
         <div id="timetablePanel" class="timetable-panel"></div>
 
         <div id="timetableEditForm" class="timetable-edit-form" hidden>
-          <h3>시간표 편집</h3>
+          <h3>시간표 편집 (매주 반복 · 기본 시간표)</h3>
+          <p class="tt-edit-hint">아래 표에서 칸을 클릭하면 그 요일·교시가 자동으로 선택됩니다.</p>
+          <div id="weeklyGrid" class="weekly-grid"></div>
           <label>요일
             <select id="ttEditDay">
               <option value="mon">월</option>
@@ -232,6 +234,24 @@
       <p>관리자 PIN을 입력하세요</p>
       <input id="pinInput" type="password" inputmode="numeric" maxlength="4">
       <button id="pinSubmitBtn">확인</button>
+    </div>
+  </div>
+
+  <div id="overrideModal" class="pin-modal" hidden>
+    <div class="pin-modal-inner override-modal-inner">
+      <button id="overrideCancelBtn" class="pin-cancel-btn" aria-label="닫기">✕</button>
+      <p id="overrideModalTitle">오늘만 내용 바꾸기</p>
+      <label class="override-field">과목/내용
+        <input id="overrideSubjectInput" type="text" placeholder="예: 현장학습">
+      </label>
+      <label class="override-field">세부 내용(선택)
+        <input id="overrideNoteInput" type="text" placeholder="예: 9시까지 운동장 집합">
+      </label>
+      <div class="override-actions">
+        <button id="overrideResetBtn" class="override-reset-btn">기본 시간표로</button>
+        <button id="overrideApplyBtn">오늘만 적용</button>
+      </div>
+      <p class="tt-edit-hint">여기서 바꾼 내용은 오늘만 적용되고, 내일은 기본 시간표로 자동으로 돌아갑니다.</p>
     </div>
   </div>
 

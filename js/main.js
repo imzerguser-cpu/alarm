@@ -1,13 +1,22 @@
-import { getDayKey, getCurrentPeriodId } from './schedule-times.js';
+import { getDayKey, getCurrentPeriodId, PERIODS } from './schedule-times.js';
 import { buildTodayRows, renderTimetable } from './timetable.js';
 import { INITIAL_SCHEDULE, INITIAL_ROSTER } from './seed-data.js';
 import { initPinLock } from './pin-lock.js';
 import {
   fetchSchedule, saveSchedule, fetchScheduleNotes, saveScheduleNotes,
-  fetchRoster, saveRoster, saveDaily, ensureTodayDaily,
+  fetchRoster, saveRoster, saveDaily, ensureTodayDaily, deleteField,
 } from './store.js';
 import { formatHiClassText } from './notice-format.js';
 import { isMorningActive } from './schedule-times.js';
+
+// renderTimetableNow()가 모듈 최상단(아래 "기본값으로 화면을 바로 채운다" 자리)
+// 에서 곧바로 한 번 호출되고, 그 안에서 renderWeeklyGrid()도 함께 불린다.
+// 그 시점에는 이 아래쪽 "시간표 편집 폼 배선" 자리에 있는 const들이 아직
+// 초기화되기 전이므로, renderWeeklyGrid()가 참조하는 값은 반드시 그보다
+// 먼저 선언돼 있어야 한다(그렇지 않으면 TDZ ReferenceError로 모듈 전체가 멈춘다).
+const WEEK_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+const DAY_LABELS = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금' };
+const CLASS_PERIODS = PERIODS.filter((p) => p.kind === 'class');
 
 // 편집은 항상 이 화면(태블릿)에서만 한다는 전제로, 실시간 구독(onSnapshot) 대신
 // 페이지를 열 때 한 번만 서버에서 불러온다(아래 loadInitialData). 저장할 때는
@@ -57,7 +66,7 @@ let currentSchedule = INITIAL_SCHEDULE;
 let currentNotes = {};
 let roster = INITIAL_ROSTER;
 let daily = {
-  date: toDateKey(new Date()), morningNotice: '', generalNotice: '', todos: {}, submits: {},
+  date: toDateKey(new Date()), morningNotice: '', generalNotice: '', todos: {}, submits: {}, periodOverrides: {},
 };
 
 // ---- 렌더 함수 ----
@@ -65,8 +74,11 @@ function renderTimetableNow() {
   const now = new Date();
   const dayKey = getDayKey(now);
   const currentPeriodId = getCurrentPeriodId(now);
-  const rows = buildTodayRows(currentSchedule, dayKey, currentPeriodId, currentNotes);
-  renderTimetable(document.getElementById('timetablePanel'), rows);
+  const rows = buildTodayRows(currentSchedule, dayKey, currentPeriodId, currentNotes, daily.periodOverrides);
+  const panel = document.getElementById('timetablePanel');
+  renderTimetable(panel, rows);
+  panel.classList.toggle('editable', window.__EDIT_MODE__);
+  renderWeeklyGrid();
 }
 
 function renderStudentList() {
@@ -205,6 +217,139 @@ document.getElementById('ttEditApplyBtn').addEventListener('click', () => {
   renderTimetableNow();
 });
 
+// ---- 관리자 모드: 월~금 전체 시간표 한눈에 보기 + 칸 클릭으로 선택 ----
+// 실제 저장은 위 select/적용 버튼이 그대로 하고, 이 표는 "전체를 보면서
+// 칸을 눌러 요일·교시를 고르는" 입력 보조 역할만 한다.
+function renderWeeklyGrid() {
+  const grid = document.getElementById('weeklyGrid');
+  if (!grid) return;
+  // 모듈 상단 const(ttEditDaySelect 등)에 기대지 않고 매번 다시 조회한다 —
+  // 이 함수는 renderTimetableNow()를 통해 그 const들이 선언되기도 전인
+  // 모듈 최초 실행 시점에 이미 한 번 불려서, 클로저 변수를 참조하면 TDZ
+  // 오류(ReferenceError)로 모듈 전체가 멈춘다.
+  const selectedDay = document.getElementById('ttEditDay').value;
+  const selectedPeriod = document.getElementById('ttEditPeriod').value;
+  grid.innerHTML = '';
+
+  const corner = document.createElement('div');
+  corner.className = 'wg-cell wg-head';
+  grid.appendChild(corner);
+  for (const day of WEEK_DAYS) {
+    const head = document.createElement('div');
+    head.className = 'wg-cell wg-head';
+    head.textContent = DAY_LABELS[day];
+    grid.appendChild(head);
+  }
+
+  for (const period of CLASS_PERIODS) {
+    const labelCell = document.createElement('div');
+    labelCell.className = 'wg-cell wg-period-label';
+    labelCell.textContent = period.label;
+    grid.appendChild(labelCell);
+
+    for (const day of WEEK_DAYS) {
+      const subject = (currentSchedule[day] && currentSchedule[day][period.id]) || '';
+      const selected = selectedDay === day && selectedPeriod === period.id;
+      const cell = document.createElement('div');
+      cell.className = 'wg-cell' + (subject ? '' : ' wg-empty') + (selected ? ' wg-selected' : '');
+      cell.textContent = subject || '-';
+      cell.addEventListener('click', () => selectWeeklyCell(day, period.id));
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function selectWeeklyCell(day, periodId) {
+  ttEditDaySelect.value = day;
+  ttEditPeriodSelect.value = periodId;
+  syncNoteField();
+  const subjectValue = (currentSchedule[day] && currentSchedule[day][periodId]) || '';
+  const presetValues = Array.from(subjectPreset.options).map((o) => o.value);
+  if (subjectValue && presetValues.includes(subjectValue)) {
+    subjectPreset.value = subjectValue;
+    subjectCustom.hidden = true;
+  } else if (subjectValue) {
+    subjectPreset.value = '__custom';
+    subjectCustom.hidden = false;
+    subjectCustom.value = subjectValue;
+  } else {
+    subjectPreset.value = '__clear';
+    subjectCustom.hidden = true;
+  }
+  renderWeeklyGrid();
+}
+
+// ---- 오늘만 시간표 바꾸기 (학생도 보는 화면의 시간표를 편집모드에서 직접 클릭) ----
+// 매주 반복되는 기본 시간표(위 관리자 폼)와 달리, 여기서 바꾼 내용은
+// daily/current 문서(periodOverrides)에만 저장되고 자정에 통째로 초기화된다
+// — 현장학습처럼 그날 하루만 있는 일정을 반영하기 위한 용도라 반복 저장이
+// 되면 안 된다.
+const overrideModal = document.getElementById('overrideModal');
+const overrideSubjectInput = document.getElementById('overrideSubjectInput');
+const overrideNoteInput = document.getElementById('overrideNoteInput');
+const overrideModalTitle = document.getElementById('overrideModalTitle');
+let overrideTargetPeriodId = null;
+
+function closeOverrideModal() {
+  overrideModal.hidden = true;
+  overrideTargetPeriodId = null;
+}
+
+function openOverrideModal(periodId) {
+  const period = PERIODS.find((p) => p.id === periodId);
+  if (!period) return;
+  overrideTargetPeriodId = periodId;
+  const dayKey = getDayKey(new Date());
+  const existing = daily.periodOverrides && daily.periodOverrides[periodId];
+  const baseSubject = period.kind === 'class'
+    ? ((currentSchedule[dayKey] && currentSchedule[dayKey][periodId]) || '')
+    : period.label;
+  overrideModalTitle.textContent = `${period.label} — 오늘만 내용 바꾸기`;
+  overrideSubjectInput.value = existing ? existing.subject : baseSubject;
+  overrideNoteInput.value = existing ? (existing.note || '') : ((currentNotes[dayKey] && currentNotes[dayKey][periodId]) || '');
+  overrideModal.hidden = false;
+  overrideSubjectInput.focus();
+}
+
+document.getElementById('timetablePanel').addEventListener('click', (e) => {
+  if (!window.__EDIT_MODE__) return;
+  const row = e.target.closest('.timetable-row');
+  if (!row) return;
+  openOverrideModal(row.dataset.periodId);
+});
+
+document.getElementById('overrideCancelBtn').addEventListener('click', closeOverrideModal);
+overrideModal.addEventListener('click', (e) => {
+  if (e.target === overrideModal) closeOverrideModal();
+});
+
+document.getElementById('overrideApplyBtn').addEventListener('click', () => {
+  if (!overrideTargetPeriodId) return;
+  const subject = overrideSubjectInput.value.trim();
+  if (!subject) {
+    alert('내용을 입력해주세요.');
+    return;
+  }
+  const note = overrideNoteInput.value.trim();
+  const updated = { ...daily.periodOverrides, [overrideTargetPeriodId]: { subject, note } };
+  daily = { ...daily, periodOverrides: updated };
+  trackSave(saveDaily({ periodOverrides: { [overrideTargetPeriodId]: { subject, note } } }));
+  renderTimetableNow();
+  closeOverrideModal();
+});
+
+document.getElementById('overrideResetBtn').addEventListener('click', () => {
+  if (!overrideTargetPeriodId) return;
+  const updated = { ...daily.periodOverrides };
+  delete updated[overrideTargetPeriodId];
+  daily = { ...daily, periodOverrides: updated };
+  // 병합 저장에서 키를 그냥 빼면(생략) 서버 문서에는 남아있는다 — 실제로
+  // 지우려면 deleteField() 센티널을 그 키의 값으로 보내야 한다.
+  trackSave(saveDaily({ periodOverrides: { [overrideTargetPeriodId]: deleteField() } }));
+  renderTimetableNow();
+  closeOverrideModal();
+});
+
 setInterval(renderTimetableNow, 30000);
 
 // ---- 관리자 PIN ----
@@ -301,6 +446,7 @@ setInterval(() => {
         renderStudentList();
         renderNoticeGeneral();
         renderMorningBanner();
+        renderTimetableNow(); // 오늘만 바꿔둔 시간표(periodOverrides)도 자정에 같이 초기화된다.
       })
       .catch(handleLoadError);
   }
@@ -469,6 +615,7 @@ async function loadInitialData() {
   renderStudentList();
   renderNoticeGeneral();
   renderMorningBanner();
+  renderTimetableNow();
 }
 
 loadInitialData();

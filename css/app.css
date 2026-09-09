@@ -185,6 +185,50 @@ body.edit-mode #morningBannerText {
 }
 body.edit-mode .timetable-edit-form { display: flex; }
 
+.tt-edit-hint { margin: 0; font-size: 0.8rem; color: #9aa7bd; }
+
+/* 오늘 시간표 패널: 편집모드일 때만 칸을 눌러 "오늘만" 내용을 바꿀 수 있다. */
+.timetable-panel.editable .timetable-row { cursor: pointer; }
+.timetable-panel.editable .timetable-row:hover { outline: 1px dashed #ffcc00; }
+.timetable-row.overridden { background: #3a2f1a; }
+.timetable-row.overridden.current { background: #ffcc00; }
+.tt-override-badge {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px;
+  background: #ffcc00; color: #111; font-size: 0.7rem; font-weight: bold; vertical-align: middle;
+}
+
+/* 관리자 모드의 요일×교시 전체 시간표 — 클릭하면 아래 요일/교시 선택이
+   자동으로 채워진다(실제 저장·적용은 그 아래 폼에서 그대로 한다). */
+.weekly-grid {
+  display: grid;
+  grid-template-columns: 2.4em repeat(5, 1fr);
+  gap: 4px;
+  font-size: 0.78rem;
+}
+.weekly-grid .wg-cell {
+  padding: 6px 4px; border-radius: 6px; background: #0e1420; text-align: center;
+  cursor: pointer; line-height: 1.3; min-height: 2.6em;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.weekly-grid .wg-cell:hover { outline: 1px dashed #ffcc00; }
+.weekly-grid .wg-cell.wg-selected { background: #ffcc00; color: #111; }
+.weekly-grid .wg-head { background: transparent; cursor: default; font-weight: bold; color: #9aa7bd; }
+.weekly-grid .wg-head:hover { outline: none; }
+.weekly-grid .wg-period-label { background: transparent; cursor: default; color: #9aa7bd; font-weight: bold; }
+.weekly-grid .wg-period-label:hover { outline: none; }
+.weekly-grid .wg-empty { color: #55617a; }
+
+.override-modal-inner { width: min(360px, 90vw); text-align: left; }
+.override-modal-inner p { text-align: center; }
+.override-field { display: block; font-size: 0.85rem; color: #9aa7bd; margin: 10px 0 4px; }
+.override-field input {
+  width: 100%; margin-top: 4px; padding: 8px; border-radius: 8px; border: 1px solid #3a4864;
+  background: #0e1420; color: #fff; font-size: 1rem; text-align: left;
+}
+.override-actions { display: flex; gap: 8px; margin-top: 14px; }
+.override-actions button { flex: 1; }
+.override-reset-btn { background: #555 !important; color: #fff !important; }
+
 .bell-running-status {
   display: block; margin-top: 4px; font-size: 0.85rem; color: #e74c3c;
 }

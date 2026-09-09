@@ -1,7 +1,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
-  doc, setDoc, getDoc,
+  doc, setDoc, getDoc, deleteField,
 } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 import { shouldResetDaily } from './daily-reset.js';
@@ -14,7 +14,7 @@ export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() }),
 });
 
-export { shouldResetDaily };
+export { shouldResetDaily, deleteField };
 
 // 편집은 항상 이 화면(태블릿)에서만 한다는 전제로, 실시간 구독(onSnapshot)
 // 대신 페이지를 열 때 한 번만 불러온다. 편집한 내용은 저장할 때 화면에도
@@ -60,7 +60,7 @@ export async function ensureTodayDaily(todayDateKey) {
   const current = snap.exists() ? snap.data() : null;
   if (!current || shouldResetDaily(current.date, todayDateKey)) {
     const fresh = {
-      date: todayDateKey, morningNotice: '', generalNotice: '', todos: {}, submits: {},
+      date: todayDateKey, morningNotice: '', generalNotice: '', todos: {}, submits: {}, periodOverrides: {},
     };
     // setDoc()은 오프라인 지속성이 켜진 상태에서 오프라인이면 실제 서버 응답이
     // 올 때까지 프라미스가 resolve되지 않는다(로컬 캐시에는 즉시 반영되지만).
