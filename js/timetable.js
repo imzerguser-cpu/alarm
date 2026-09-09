@@ -1,4 +1,4 @@
-import { PERIODS } from './schedule-times.js';
+import { PERIODS, formatTimeRange12 } from './schedule-times.js';
 
 // periodOverrides: 오늘 날짜에만 적용되는 1회성 변경(daily/current 문서의
 // periodOverrides 필드). 요일 반복 시간표(weeklySchedule/weeklyNotes)보다
@@ -29,7 +29,7 @@ export function buildTodayRows(weeklySchedule, dayKey, currentPeriodId, weeklyNo
     }
     rows.push({
       id: period.id,
-      time: `${period.start}~${period.end}`,
+      time: formatTimeRange12(period.start, period.end),
       label: period.label,
       subject,
       note,
