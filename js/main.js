@@ -98,6 +98,19 @@ function renderTimetableNow() {
   renderTimetable(panel, rows);
   panel.classList.toggle('editable', window.__EDIT_MODE__);
   renderWeeklyGrid();
+  updateCurrentPeriodInfo(rows);
+}
+
+// 지금 시각이 rows 중 어느 교시에 해당하는지 찾아 알리미 상단에 그대로 문장으로
+// 보여준다. 교시 사이 짧은 이동 시간처럼 어느 교시에도 안 걸리는 순간에는
+// "쉬는 시간"으로 표시한다.
+function updateCurrentPeriodInfo(rows) {
+  const el = document.getElementById('currentPeriodInfo');
+  if (!el) return;
+  const current = rows.find((r) => r.isCurrent);
+  el.textContent = current
+    ? `지금은 ${current.label} — ${current.subject}${current.overridden ? ' (오늘만)' : ''} 시간입니다.`
+    : '지금은 쉬는 시간입니다.';
 }
 
 function renderStudentList() {
@@ -190,6 +203,11 @@ renderTimetableNow();
 renderStudentList();
 renderNoticeGeneral();
 renderMorningBanner();
+
+// 30초 주기 갱신을 기다리지 않고, 알리미를 시작한 바로 그 순간의 시각 기준으로
+// "지금은 몇 교시" 문구가 바로 갱신되게 한다(bell.js도 이 버튼에 자기 리스너를
+// 따로 갖고 있다 — 여기서는 그와 별개로 화면 갱신만 담당한다).
+document.getElementById('startBellBtn').addEventListener('click', renderTimetableNow);
 
 // ---- 시간표 편집 폼 배선 ----
 const subjectPreset = document.getElementById('ttEditSubjectPreset');

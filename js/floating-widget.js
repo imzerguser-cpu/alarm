@@ -41,6 +41,11 @@ export async function openFloatingWidget({ getContent }) {
     #fwStartBtn { background: #2ecc71; color: #062; }
     #fwStopBtn { background: #555; color: #fff; }
     .fw-controls button:disabled { background: #333; color: #777; cursor: not-allowed; }
+    .fw-opacity {
+      display: flex; align-items: center; gap: 6px; margin-top: 8px;
+      font-size: 0.7rem; color: #9aa7bd;
+    }
+    .fw-opacity input[type="range"] { flex: 1; }
   `;
   pipWindow.document.head.appendChild(style);
 
@@ -59,6 +64,10 @@ export async function openFloatingWidget({ getContent }) {
         <button id="fwStartBtn">▶ 시작</button>
         <button id="fwStopBtn">⏹ 중지</button>
       </div>
+      <div class="fw-opacity">
+        <span>투명도</span>
+        <input id="fwOpacityRange" type="range" min="30" max="100" value="100">
+      </div>
     </div>
   `;
   pipWindow.document.body.appendChild(root);
@@ -66,6 +75,31 @@ export async function openFloatingWidget({ getContent }) {
   const startBtn = pipWindow.document.getElementById('fwStartBtn');
   const stopBtn = pipWindow.document.getElementById('fwStopBtn');
   const timetableEl = pipWindow.document.getElementById('fwTimetable');
+  const opacityRange = pipWindow.document.getElementById('fwOpacityRange');
+
+  // 브라우저 창 자체를 데스크톱이 비치는 진짜 반투명 창으로 만드는 것은 웹
+  // 표준 API로는 지원되지 않는다 — 대신 CSS opacity로 창 전체(배경+글자)를
+  // 흐리게 만들어 뒤에 겹친 다른 창을 방해하는 느낌을 줄인다. 마지막으로
+  // 고른 값은 localStorage에 남겨서 다음에 열 때도 그대로 이어간다.
+  const OPACITY_KEY = 'fwOpacity';
+  let savedOpacity = 100;
+  try {
+    const raw = Number(localStorage.getItem(OPACITY_KEY));
+    if (raw >= 30 && raw <= 100) savedOpacity = raw;
+  } catch (err) {
+    // localStorage 접근이 막힌 환경 - 기본값(100)으로 계속 진행
+  }
+  opacityRange.value = String(savedOpacity);
+  pipWindow.document.body.style.opacity = String(savedOpacity / 100);
+  opacityRange.addEventListener('input', () => {
+    const value = Number(opacityRange.value);
+    pipWindow.document.body.style.opacity = String(value / 100);
+    try {
+      localStorage.setItem(OPACITY_KEY, String(value));
+    } catch (err) {
+      // 저장 실패해도 이번 창에는 이미 적용됐으니 무시
+    }
+  });
 
   const renderRows = (rows) => {
     timetableEl.innerHTML = '';
