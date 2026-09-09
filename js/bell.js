@@ -2,6 +2,7 @@
   const STORAGE_KEY = 'classBellSchedule';
   const FIRED_KEY = 'classBellFired';
   const RUNNING_KEY = 'classBellRunning';
+  const ALARM_REPEAT_COUNT = 3;
 
   const DEFAULT_SCHEDULE = [
     { time: '08:45', message: '교실 청소, 자리 정리를 하고 가정통신문을 확인해서 제출하세요.' },
@@ -43,6 +44,7 @@
   }
   let tickTimer = null;
   let bannerHideTimer = null;
+  let wakeLockSentinel = null;
 
   // 관리자 모드가 아니어도 항상 보이는 자리(상단 시계 옆)에 켜짐/꺼짐을 표시한다.
   function updateRunningBadge() {
@@ -120,6 +122,68 @@
     window.speechSynthesis.speak(utter);
   }
 
+  // 실제 수업종 알림은 한 번만 말하면 교실이 시끄러울 때 놓치기 쉬워서
+  // 같은 문장을 세 번 반복하고 멈춘다(무한 반복 아님). onend로 다음 발화를
+  // 이어 붙여야 브라우저가 겹쳐 말하지 않는다.
+  function speakOnceAsync(text) {
+    return new Promise((resolve) => {
+      if (!('speechSynthesis' in window)) { resolve(); return; }
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'ko-KR';
+      utter.rate = 1.08;
+      utter.pitch = 0.9;
+      const voice = pickKoreanVoice();
+      if (voice) utter.voice = voice;
+      utter.onend = resolve;
+      utter.onerror = resolve;
+      window.speechSynthesis.speak(utter);
+    });
+  }
+
+  async function speakRepeated(text, times) {
+    window.speechSynthesis.cancel();
+    for (let i = 0; i < times; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await speakOnceAsync(text);
+    }
+  }
+
+  // 태블릿에서 다른 앱을 보고 있으면 이 탭은 백그라운드로 밀려나 음성 재생이
+  // 브라우저 정책상 끊긴다. Service Worker의 showNotification()은 이 경우에도
+  // 시스템 알림(소리+진동)을 띄울 수 있으므로 최소한의 대안으로 사용한다.
+  // (Service Worker 안에서는 speechSynthesis 자체를 쓸 수 없어 완전한 대체는 불가능하다.)
+  function notifyInBackground(message) {
+    if (document.visibilityState !== 'hidden') return;
+    if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    navigator.serviceWorker.ready
+      .then((reg) => {
+        if (reg.active) {
+          reg.active.postMessage({ type: 'SHOW_ALARM_NOTIFICATION', title: '🔔 교실 수업 알리미', body: message });
+        }
+      })
+      .catch(() => {});
+  }
+
+  // 화면이 꺼지지 않아야 이 탭이 계속 살아있는다. 다른 앱으로 전환하면 OS가
+  // wake lock을 자동 해제하므로, 다시 이 탭이 보일 때 running 상태면 재요청한다.
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      wakeLockSentinel = await navigator.wakeLock.request('screen');
+      wakeLockSentinel.addEventListener('release', () => { wakeLockSentinel = null; });
+    } catch (err) {
+      // 지원 안 되거나 권한이 없는 환경 - 조용히 무시
+    }
+  }
+
+  function releaseWakeLock() {
+    if (wakeLockSentinel) {
+      wakeLockSentinel.release().catch(() => {});
+      wakeLockSentinel = null;
+    }
+  }
+
   function showBanner(text) {
     alarmBannerTextEl.textContent = text;
     alarmBannerEl.classList.add('show');
@@ -167,7 +231,8 @@
     schedule.forEach((item) => {
       if (item.time === hm && !fired.has(item.time)) {
         markFired(item.time);
-        speak(item.message);
+        speakRepeated(item.message, ALARM_REPEAT_COUNT);
+        notifyInBackground(item.message);
         showBanner(`${item.time} — ${item.message}`);
       }
     });
@@ -183,6 +248,11 @@
     running = true;
     localStorage.setItem(RUNNING_KEY, 'true');
     speak('교실 수업 알리미를 시작합니다.');
+    // 알림 권한도, 화면 유지도 사용자 클릭(제스처) 안에서 요청해야 브라우저가 막지 않는다.
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+    requestWakeLock();
     startBtn.disabled = true;
     stopBtn.disabled = false;
     bellStatusEl.textContent = '알리미가 작동 중입니다.';
@@ -193,6 +263,7 @@
   function stopBell() {
     running = false;
     localStorage.setItem(RUNNING_KEY, 'false');
+    releaseWakeLock();
     startBtn.disabled = false;
     stopBtn.disabled = true;
     bellStatusEl.textContent = '알리미가 꺼져 있습니다. 시작 버튼을 눌러주세요.';
@@ -265,8 +336,17 @@
     stopBtn.disabled = false;
     bellStatusEl.textContent = '알리미가 작동 중입니다.';
     bellStatusEl.classList.add('on');
+    requestWakeLock();
   }
   updateRunningBadge();
+
+  // 다른 앱으로 전환했다가 이 탭으로 돌아오면 OS가 자동 해제한 wake lock을
+  // 다시 잡아준다(잡아뒀던 화면-꺼짐-방지 상태를 이어간다).
+  document.addEventListener('visibilitychange', () => {
+    if (running && document.visibilityState === 'visible' && !wakeLockSentinel) {
+      requestWakeLock();
+    }
+  });
   // 화면 상단의 시계와 "다음 알림" 표시는 관리자 모드 여부와 무관하게 항상
   // 최신이어야 한다(학생이 보는 화면에도 큰 시계가 계속 가야 하고, PC 플로팅
   // 위젯도 #nextAlarmInfo의 텍스트를 그대로 읽는다). 시작/중지/음성테스트

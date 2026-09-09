@@ -3,7 +3,7 @@ export function checkPin(input, correctPin) {
 }
 
 export function initPinLock({
-  buttonEl, modalEl, inputEl, submitEl, getCorrectPin, onUnlock, isUnlocked, onLock,
+  buttonEl, modalEl, inputEl, submitEl, cancelEl, getCorrectPin, onUnlock, isUnlocked, onLock,
 }) {
   const open = () => {
     // 이미 편집모드면 버튼은 "잠그기"로 동작한다 — 잠글 때는 PIN을 묻지 않는다.
@@ -33,8 +33,12 @@ export function initPinLock({
   submitEl.addEventListener('click', submit);
   inputEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') submit();
+    if (e.key === 'Escape') close();
   });
   modalEl.addEventListener('click', (e) => {
     if (e.target === modalEl) close();
   });
+  // PIN을 몰라도 실수로 연 창은 닫을 수 있어야 한다 — 배경 탭이나 Esc는
+  // 발견하기 어려우므로 눈에 보이는 닫기 버튼을 따로 둔다.
+  if (cancelEl) cancelEl.addEventListener('click', close);
 }

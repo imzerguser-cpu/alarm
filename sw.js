@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'classroom-alarm-v3';
+const CACHE_NAME = 'classroom-alarm-v4';
 const APP_SHELL = [
   './',
   './index.html',
@@ -35,6 +35,35 @@ self.addEventListener('activate', (event) => {
     )
   );
   self.clients.claim();
+});
+
+// 페이지 탭이 백그라운드(다른 앱 사용 중)일 때도 시스템 알림은 뜰 수 있다.
+// speechSynthesis는 Service Worker 안에서 쓸 수 없으므로 완전한 대체는 아니지만,
+// 소리·진동으로라도 놓치지 않게 하는 최소한의 안전망이다.
+self.addEventListener('message', (event) => {
+  if (!event.data || event.data.type !== 'SHOW_ALARM_NOTIFICATION') return;
+  const { title, body } = event.data;
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: './icons/icon.svg',
+      vibrate: [300, 100, 300, 100, 300],
+      requireInteraction: true,
+      tag: 'class-bell-alarm',
+      renotify: true,
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      const existing = clientList.find((c) => c.url.includes(self.registration.scope));
+      if (existing) return existing.focus();
+      return self.clients.openWindow('./');
+    })
+  );
 });
 
 // 캐시 우선 + 백그라운드 갱신(stale-while-revalidate). 캐시가 있으면 그걸

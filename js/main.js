@@ -230,6 +230,7 @@ initPinLock({
   modalEl: document.getElementById('pinModal'),
   inputEl: document.getElementById('pinInput'),
   submitEl: document.getElementById('pinSubmitBtn'),
+  cancelEl: document.getElementById('pinCancelBtn'),
   getCorrectPin: () => EDIT_PIN,
   // 편집 버튼은 토글이다. 잠금 해제 상태에서 누르면 PIN 없이 바로 다시 잠근다
   // (교실 공용 태블릿이 하루 종일 켜져 있으므로 다시 잠글 수단이 필요하다).
