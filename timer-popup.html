@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>타이머</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: 'Malgun Gothic', sans-serif; background: #0e1420; color: #fff;
+      padding: 16px; text-align: center;
+    }
+    h1 { font-size: 1rem; color: #ffcc00; margin: 0 0 14px; }
+    .timer-presets { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; flex-wrap: wrap; }
+    .timer-presets button, #timerCustomSetBtn {
+      padding: 8px 14px; border-radius: 8px; border: none; background: #34495e; color: #fff;
+      font-weight: bold; cursor: pointer;
+    }
+    #timerCustomMinutes {
+      width: 70px; padding: 8px; border-radius: 8px; border: 1px solid #3a4864; background: #1a2233; color: #fff;
+      text-align: center;
+    }
+    .timer-display {
+      font-size: 3rem; font-weight: bold; margin: 18px 0; color: #ffcc00;
+    }
+    .timer-display.done { color: #e74c3c; }
+    .timer-controls { display: flex; gap: 8px; justify-content: center; }
+    .timer-controls button {
+      padding: 10px 18px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer;
+    }
+    #timerStartBtn { background: #2ecc71; color: #062; }
+    #timerPauseBtn { background: #555; color: #fff; }
+    #timerResetBtn { background: #e74c3c; color: #fff; }
+  </style>
+</head>
+<body>
+  <h1>⏱ 타이머</h1>
+  <div class="timer-presets">
+    <button data-seconds="60">1분</button>
+    <button data-seconds="180">3분</button>
+    <button data-seconds="300">5분</button>
+    <button data-seconds="600">10분</button>
+    <input id="timerCustomMinutes" type="number" min="1" max="60" placeholder="분">
+    <button id="timerCustomSetBtn">설정</button>
+  </div>
+  <div id="timerDisplay" class="timer-display">00:00</div>
+  <div class="timer-controls">
+    <button id="timerStartBtn">시작</button>
+    <button id="timerPauseBtn">일시정지</button>
+    <button id="timerResetBtn">초기화</button>
+  </div>
+
+  <script type="module">
+    import { wireTimerWidget } from './js/timer.js';
+    wireTimerWidget({
+      presetButtons: Array.from(document.querySelectorAll('.timer-presets button')),
+      customInput: document.getElementById('timerCustomMinutes'),
+      customSetBtn: document.getElementById('timerCustomSetBtn'),
+      displayEl: document.getElementById('timerDisplay'),
+      startBtn: document.getElementById('timerStartBtn'),
+      pauseBtn: document.getElementById('timerPauseBtn'),
+      resetBtn: document.getElementById('timerResetBtn'),
+    });
+  </script>
+</body>
+</html>

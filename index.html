@@ -66,6 +66,31 @@
       margin-top: 14px; padding: 8px 16px; border-radius: 8px; border: none; background: #111; color: #ffcc00;
       font-weight: bold; cursor: pointer;
     }
+
+    .bell-schedule-hidden { display: none !important; }
+
+    .manual-refresh-btn {
+      margin-left: 8px; padding: 4px 10px; border-radius: 8px; border: none; background: #34495e; color: #fff;
+      font-size: 0.78rem; font-weight: bold; cursor: pointer;
+    }
+    .manual-refresh-status { margin-left: 6px; font-size: 0.78rem; color: #9aa7bd; }
+
+    .admin-save-message { margin: 8px 0 0; font-size: 0.82rem; min-height: 1.2em; color: #2ecc71; }
+    .admin-save-message.error { color: #ff6b6b; }
+
+    .tt-edit-hint { margin: 0 0 8px; font-size: 0.8rem; color: #9aa7bd; }
+
+    #subjectRuleList .schedule-row input[type="number"] {
+      width: 70px; padding: 8px; border-radius: 8px; border: 1px solid #3a4864; background: #0e1420; color: #fff;
+    }
+    #breakDefaultMinutesInput { width: 80px; }
+    .schedule-card label {
+      display: block; font-size: 0.85rem; color: #9aa7bd; margin-bottom: 10px;
+    }
+    .schedule-card label input {
+      display: block; margin-top: 4px; width: 100%; padding: 8px; border-radius: 8px;
+      border: 1px solid #3a4864; background: #0e1420; color: #fff;
+    }
   </style>
   <!-- defer: 이 파일이 꽤 커서 head에서 그냥 두면 화면 전체 렌더링을 막는다.
        엑셀 업로드 버튼을 실제로 누르기 전까지는 필요 없으므로 백그라운드로
@@ -85,6 +110,8 @@
       <span id="bellRunningStatus" class="bell-running-status"></span>
       <span id="connStatus" class="conn-status" hidden>⚠ 연결 끊김 — 마지막으로 받은 내용을 보여주고 있어요</span>
       <span id="saveStatus" class="save-status" hidden>⚠ 저장 실패 — 방금 입력한 내용이 저장되지 않았습니다. 인터넷 연결을 확인해주세요.</span>
+      <button id="manualRefreshBtn" class="manual-refresh-btn">🔄 지금 새로고침</button>
+      <span id="manualRefreshStatus" class="manual-refresh-status"></span>
     </header>
 
     <div id="morningBanner" class="morning-banner" hidden>
@@ -117,13 +144,54 @@
           </div>
 
           <div id="bellAdminSection" class="bell-admin-section">
-            <div class="schedule-card">
+            <!-- bell.js가 이 요소들의 존재 자체는 필요로 하지만(내부적으로 여전히
+                 읽고 쓴다), 실제 편집은 아래 새 화면들(아침 고정 알림/쉬는시간
+                 멘트/과목별 알림)에서 하므로 화면에는 숨겨둔다. -->
+            <div class="schedule-card bell-schedule-hidden">
               <h2>오늘의 알림 시간표</h2>
               <div id="scheduleList"></div>
               <div class="schedule-actions">
                 <button id="addRowBtn">+ 알림 추가</button>
                 <button id="saveScheduleBtn">저장</button>
               </div>
+            </div>
+
+            <div class="schedule-card">
+              <h2>아침 활동 고정 알림</h2>
+              <p class="tt-edit-hint">매일 같은 시각에 반복되는 알림입니다(청소, 유창성 읽기 등).</p>
+              <div id="morningAlertList"></div>
+              <div class="schedule-actions">
+                <button id="addMorningAlertBtn">+ 알림 추가</button>
+                <button id="saveMorningAlertsBtn">저장</button>
+              </div>
+              <p id="morningAlertsMessage" class="admin-save-message"></p>
+            </div>
+
+            <div class="schedule-card">
+              <h2>쉬는 시간 기본 멘트</h2>
+              <p class="tt-edit-hint">
+                아래 "과목별 특별 알림"에 없는 모든 쉬는 시간에 이 멘트가 나갑니다.
+                <br>{쉬는시간}/{분}/{다음과목} 자리는 자동으로 채워집니다.
+              </p>
+              <label>몇 분 전에 알릴지
+                <input id="breakDefaultMinutesInput" type="number" min="1" max="20">
+              </label>
+              <label>기본 멘트
+                <input id="breakDefaultTemplateInput" type="text">
+              </label>
+              <button id="saveBreakDefaultBtn">저장</button>
+              <p id="breakDefaultMessage" class="admin-save-message"></p>
+            </div>
+
+            <div class="schedule-card">
+              <h2>과목별 특별 알림</h2>
+              <p class="tt-edit-hint">시간표의 과목명과 글자가 정확히 같아야 적용됩니다(예: "음악(가야금)").</p>
+              <div id="subjectRuleList"></div>
+              <div class="schedule-actions">
+                <button id="addSubjectRuleBtn">+ 과목 알림 추가</button>
+                <button id="saveSubjectRulesBtn">저장</button>
+              </div>
+              <p id="subjectRulesMessage" class="admin-save-message"></p>
             </div>
           </div>
         </div>
@@ -189,29 +257,11 @@
       </aside>
     </div>
 
-    <section class="timer-section">
-      <h3 class="timer-heading">⏱ 타이머</h3>
-      <div class="timer-widget">
-        <div class="timer-presets">
-          <button data-seconds="60">1분</button>
-          <button data-seconds="180">3분</button>
-          <button data-seconds="300">5분</button>
-          <button data-seconds="600">10분</button>
-        </div>
-        <input id="timerCustomMinutes" type="number" min="1" max="60" placeholder="분">
-        <button id="timerCustomSetBtn">설정</button>
-        <div id="timerDisplay" class="timer-display">00:00</div>
-        <div class="timer-controls">
-          <button id="timerStartBtn">시작</button>
-          <button id="timerPauseBtn">일시정지</button>
-          <button id="timerResetBtn">초기화</button>
-        </div>
-      </div>
-    </section>
   </div>
 
   <div class="toolbar">
     <button id="editModeBtn">🔐 관리자 모드</button>
+    <button id="openTimerPopupBtn">⏱ 타이머 열기</button>
 
     <div id="adminOnlyControls" class="admin-only-controls">
       <button id="excelUploadBtn">📥 엑셀로 학생 명단 가져오기</button>

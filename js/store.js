@@ -54,6 +54,32 @@ export function saveDaily(data) {
   return setDoc(doc(db, 'daily', 'current'), data, { merge: true });
 }
 
+// 수업종 알림 설정(아침 고정 알림, 쉬는시간 기본 멘트, 과목별 특별 알림).
+// 기기마다 따로 있던 PIN과 달리 이건 원래도 "모든 기기에 똑같이 반영"돼야
+// 맞는 값이라 Firestore에 둔다.
+export async function fetchBellConfig() {
+  const snap = await getDoc(doc(db, 'bellConfig', 'current'));
+  return { data: snap.exists() ? snap.data() : null, fromCache: snap.metadata.fromCache };
+}
+
+// merge:true — 아침 고정 알림/쉬는시간 기본 멘트/과목별 알림을 각각 다른
+// 화면 섹션에서 따로 저장하므로, 매번 문서 전체를 다시 보내지 않고 바뀐
+// 필드만 보내도 나머지가 지워지지 않아야 한다(saveDaily와 같은 이유).
+export function saveBellConfig(data) {
+  return setDoc(doc(db, 'bellConfig', 'current'), data, { merge: true });
+}
+
+// 관리자 PIN. 예전에는 기기별 localStorage에 따로 저장했는데, "한 곳에서
+// 바꾸면 다른 기기에도 반영돼야 한다"는 요청으로 여기로 옮겼다.
+export async function fetchAdminPin() {
+  const snap = await getDoc(doc(db, 'settings', 'admin'));
+  return { data: snap.exists() ? snap.data() : null, fromCache: snap.metadata.fromCache };
+}
+
+export function saveAdminPin(pin) {
+  return setDoc(doc(db, 'settings', 'admin'), { pin });
+}
+
 export async function ensureTodayDaily(todayDateKey) {
   const ref = doc(db, 'daily', 'current');
   const snap = await getDoc(ref);

@@ -5,9 +5,11 @@ import { initPinLock } from './pin-lock.js';
 import {
   fetchSchedule, saveSchedule, fetchScheduleNotes, saveScheduleNotes,
   fetchRoster, saveRoster, saveDaily, ensureTodayDaily, deleteField,
+  fetchBellConfig, saveBellConfig, fetchAdminPin, saveAdminPin,
 } from './store.js';
 import { formatHiClassText } from './notice-format.js';
 import { isMorningActive } from './schedule-times.js';
+import { computeTodayBellSchedule, DEFAULT_BELL_CONFIG } from './bell-schedule.js';
 
 // renderTimetableNow()가 모듈 최상단(아래 "기본값으로 화면을 바로 채운다" 자리)
 // 에서 곧바로 한 번 호출되고, 그 안에서 renderWeeklyGrid()도 함께 불린다.
@@ -68,6 +70,23 @@ let roster = INITIAL_ROSTER;
 let daily = {
   date: toDateKey(new Date()), morningNotice: '', generalNotice: '', todos: {}, submits: {}, periodOverrides: {},
 };
+let bellConfig = DEFAULT_BELL_CONFIG;
+let adminPin = '1234';
+
+// 오늘 시간표(currentSchedule)와 알림 설정(bellConfig)을 조합해 "오늘 몇 시에
+// 무슨 말을 할지" 목록을 계산하고, js/bell.js에 그대로 밀어 넣는다. bell.js는
+// 시간표를 몰라도 되고 그냥 이 결과를 그 시각에 말해주기만 하면 된다(계산은
+// js/bell-schedule.js의 순수 함수가 담당).
+function pushBellSchedule() {
+  if (!window.classBell || !window.classBell.setSchedule) return;
+  const dayKey = getDayKey(new Date());
+  const items = computeTodayBellSchedule({
+    periods: PERIODS,
+    daySubjects: currentSchedule[dayKey] || {},
+    bellConfig,
+  });
+  window.classBell.setSchedule(items);
+}
 
 // ---- 렌더 함수 ----
 function renderTimetableNow() {
@@ -136,7 +155,9 @@ function renderNoticeGeneral() {
   if (document.activeElement !== el) {
     el.textContent = daily.generalNotice || '';
   }
-  el.contentEditable = window.__EDIT_MODE__ ? 'true' : 'false';
+  // 하이클래스 알림장은 관리자 모드가 아니어도 누구나(교사가 급하게) 바로
+  // 입력할 수 있어야 한다는 요청으로, 편집모드 여부와 상관없이 항상 편집 가능.
+  el.contentEditable = 'true';
 }
 
 function renderMorningBanner() {
@@ -215,6 +236,7 @@ document.getElementById('ttEditApplyBtn').addEventListener('click', () => {
   trackSave(saveScheduleNotes(currentNotes));
 
   renderTimetableNow();
+  pushBellSchedule(); // 오늘 요일의 과목이 바뀌었을 수 있으니 알림 시각도 다시 계산한다.
 });
 
 // ---- 관리자 모드: 월~금 전체 시간표 한눈에 보기 + 칸 클릭으로 선택 ----
@@ -352,22 +374,146 @@ document.getElementById('overrideResetBtn').addEventListener('click', () => {
 
 setInterval(renderTimetableNow, 30000);
 
-// ---- 관리자 PIN ----
-// 관리자 화면(엑셀 업로드, PIN 변경 등)에서 바꿀 수 있도록 localStorage에
-// 저장해두고, 없으면 기본값 '1234'를 쓴다. let인 이유는 changePinBtn 클릭
-// 시 바로 바뀌어야 하기 때문 — pin-lock.js에는 getCorrectPin 함수로 넘겨서
-// 매번 최신 값을 물어보게 한다(값 자체를 넘기면 그 순간 값이 굳어버린다).
-const PIN_STORAGE_KEY = 'classAdminPin';
-// 사파리 콘텐츠 차단 등으로 localStorage 접근 자체가 막힌 환경도 있다
-// (js/bell.js가 같은 이유로 이미 이렇게 감싸고 있다) — 감싸지 않으면
-// 이 한 줄에서 던진 예외가 모듈 전체를 멈춰 세워 시간표·알림장·타이머까지
-// 다 같이 죽는다.
-let EDIT_PIN = '1234';
-try {
-  EDIT_PIN = localStorage.getItem(PIN_STORAGE_KEY) || '1234';
-} catch (err) {
-  console.error('PIN을 불러오지 못했습니다:', err);
+// ---- 관리자 모드: 수업종 알림 설정 (아침 고정 알림 / 쉬는시간 기본 멘트 / 과목별 특별 알림) ----
+// 실제로 화면에 나가는 시각·문구는 js/bell-schedule.js가 currentSchedule과
+// 이 bellConfig를 조합해 계산한다(pushBellSchedule). 여기서는 그 설정값
+// 자체를 관리자가 편집하는 화면만 담당한다.
+let draftMorningAlerts = [];
+let draftSubjectRules = [];
+
+function renderMorningAlertRows() {
+  const container = document.getElementById('morningAlertList');
+  container.innerHTML = '';
+  draftMorningAlerts.forEach((item, index) => {
+    const row = document.createElement('div');
+    row.className = 'schedule-row';
+
+    const timeInput = document.createElement('input');
+    timeInput.type = 'time';
+    timeInput.value = item.time;
+    timeInput.addEventListener('change', () => { draftMorningAlerts[index].time = timeInput.value; });
+
+    const textInput = document.createElement('input');
+    textInput.type = 'text';
+    textInput.value = item.message;
+    textInput.addEventListener('change', () => { draftMorningAlerts[index].message = textInput.value; });
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'row-del-btn';
+    delBtn.textContent = '삭제';
+    delBtn.addEventListener('click', () => {
+      draftMorningAlerts.splice(index, 1);
+      renderMorningAlertRows();
+    });
+
+    row.append(timeInput, textInput, delBtn);
+    container.appendChild(row);
+  });
 }
+
+function renderSubjectRuleRows() {
+  const container = document.getElementById('subjectRuleList');
+  container.innerHTML = '';
+  draftSubjectRules.forEach((item, index) => {
+    const row = document.createElement('div');
+    row.className = 'schedule-row';
+
+    const subjectInput = document.createElement('input');
+    subjectInput.type = 'text';
+    subjectInput.placeholder = '과목명(시간표와 정확히 같게)';
+    subjectInput.value = item.subject;
+    subjectInput.addEventListener('change', () => { draftSubjectRules[index].subject = subjectInput.value.trim(); });
+
+    const minutesInput = document.createElement('input');
+    minutesInput.type = 'number';
+    minutesInput.min = '1';
+    minutesInput.max = '20';
+    minutesInput.value = item.minutesBefore;
+    minutesInput.addEventListener('change', () => {
+      draftSubjectRules[index].minutesBefore = Number(minutesInput.value) || 2;
+    });
+
+    const messageInput = document.createElement('input');
+    messageInput.type = 'text';
+    messageInput.value = item.message;
+    messageInput.addEventListener('change', () => { draftSubjectRules[index].message = messageInput.value; });
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'row-del-btn';
+    delBtn.textContent = '삭제';
+    delBtn.addEventListener('click', () => {
+      draftSubjectRules.splice(index, 1);
+      renderSubjectRuleRows();
+    });
+
+    row.append(subjectInput, minutesInput, messageInput, delBtn);
+    container.appendChild(row);
+  });
+}
+
+function renderBellAdminUI() {
+  draftMorningAlerts = (bellConfig.morningAlerts || []).map((a) => ({ ...a }));
+  draftSubjectRules = (bellConfig.subjectRules || []).map((r) => ({ ...r }));
+  renderMorningAlertRows();
+  renderSubjectRuleRows();
+  document.getElementById('breakDefaultMinutesInput').value = bellConfig.breakDefaultMinutes || 2;
+  document.getElementById('breakDefaultTemplateInput').value =
+    bellConfig.breakDefaultTemplate || DEFAULT_BELL_CONFIG.breakDefaultTemplate;
+}
+
+document.getElementById('addMorningAlertBtn').addEventListener('click', () => {
+  draftMorningAlerts.push({ time: '09:00', message: '새 알림 내용을 입력하세요.' });
+  renderMorningAlertRows();
+});
+
+document.getElementById('saveMorningAlertsBtn').addEventListener('click', () => {
+  const sorted = draftMorningAlerts.slice().sort((a, b) => a.time.localeCompare(b.time));
+  bellConfig = { ...bellConfig, morningAlerts: sorted };
+  trackSave(saveBellConfig({ morningAlerts: sorted }));
+  draftMorningAlerts = sorted.map((a) => ({ ...a }));
+  renderMorningAlertRows();
+  pushBellSchedule();
+  const msg = document.getElementById('morningAlertsMessage');
+  msg.textContent = '저장되었습니다.';
+  msg.className = 'admin-save-message';
+});
+
+document.getElementById('addSubjectRuleBtn').addEventListener('click', () => {
+  draftSubjectRules.push({ subject: '', minutesBefore: 4, message: '' });
+  renderSubjectRuleRows();
+});
+
+document.getElementById('saveSubjectRulesBtn').addEventListener('click', () => {
+  const cleaned = draftSubjectRules.filter((r) => r.subject && r.message);
+  bellConfig = { ...bellConfig, subjectRules: cleaned };
+  trackSave(saveBellConfig({ subjectRules: cleaned }));
+  draftSubjectRules = cleaned.map((r) => ({ ...r }));
+  renderSubjectRuleRows();
+  pushBellSchedule();
+  const msg = document.getElementById('subjectRulesMessage');
+  msg.textContent = '저장되었습니다.';
+  msg.className = 'admin-save-message';
+});
+
+document.getElementById('saveBreakDefaultBtn').addEventListener('click', () => {
+  const minutes = Number(document.getElementById('breakDefaultMinutesInput').value) || 2;
+  const template = document.getElementById('breakDefaultTemplateInput').value.trim()
+    || DEFAULT_BELL_CONFIG.breakDefaultTemplate;
+  bellConfig = { ...bellConfig, breakDefaultMinutes: minutes, breakDefaultTemplate: template };
+  trackSave(saveBellConfig({ breakDefaultMinutes: minutes, breakDefaultTemplate: template }));
+  pushBellSchedule();
+  const msg = document.getElementById('breakDefaultMessage');
+  msg.textContent = '저장되었습니다.';
+  msg.className = 'admin-save-message';
+});
+
+// ---- 관리자 PIN ----
+// 예전에는 기기별 localStorage에 따로 저장해서 "PC에서 바꾼 PIN이 태블릿에는
+// 안 반영된다"는 문제가 있었다. 이제 Firestore(settings/admin)에 저장해
+// 어느 기기에서 바꾸든 모든 기기에 그대로 반영된다. let인 이유는 changePinBtn
+// 클릭 시 바로 바뀌어야 하기 때문 — pin-lock.js에는 getCorrectPin 함수로
+// 넘겨서 매번 최신 값을 물어보게 한다(값 자체를 넘기면 그 순간 값이 굳어버린다).
+// 서버 응답 전에는 기본값 '1234'로 동작한다(loadInitialData에서 덮어씀).
 window.__EDIT_MODE__ = false;
 
 initPinLock({
@@ -376,7 +522,7 @@ initPinLock({
   inputEl: document.getElementById('pinInput'),
   submitEl: document.getElementById('pinSubmitBtn'),
   cancelEl: document.getElementById('pinCancelBtn'),
-  getCorrectPin: () => EDIT_PIN,
+  getCorrectPin: () => adminPin,
   // 편집 버튼은 토글이다. 잠금 해제 상태에서 누르면 PIN 없이 바로 다시 잠근다
   // (교실 공용 태블릿이 하루 종일 켜져 있으므로 다시 잠글 수단이 필요하다).
   isUnlocked: () => window.__EDIT_MODE__,
@@ -405,16 +551,10 @@ document.getElementById('changePinBtn').addEventListener('click', () => {
     alert('PIN은 숫자 4자리로 입력해주세요.');
     return;
   }
-  EDIT_PIN = value;
-  try {
-    localStorage.setItem(PIN_STORAGE_KEY, value);
-  } catch (err) {
-    console.error('PIN을 저장하지 못했습니다:', err);
-  }
+  adminPin = value;
+  trackSave(saveAdminPin(value));
   input.value = '';
-  // PIN은 이 브라우저에만 저장된다(다른 기기와 공유되는 시간표·알림장과
-  // 다르게, 태블릿·PC 등 기기마다 따로 바꿔야 한다는 점을 분명히 알려준다).
-  alert('이 기기(브라우저)에서 PIN이 변경되었습니다. 다른 태블릿/PC에서는 각각 따로 바꿔야 합니다.');
+  alert('PIN이 변경되었습니다. 잠시 후 다른 기기에도 그대로 반영됩니다.');
 });
 
 // ---- 알림장 상단 안내문 ----
@@ -422,7 +562,6 @@ document.getElementById('changePinBtn').addEventListener('click', () => {
 // 구분자도 넣지 않아 여러 줄이 한 줄로 뭉개지므로, 실제 줄바꿈을 보존하는
 // innerText를 쓴다(CSS white-space: pre-wrap과 formatHiClassText가 \n을 전제).
 document.getElementById('noticeGeneralText').addEventListener('blur', (e) => {
-  if (!window.__EDIT_MODE__) return;
   daily = { ...daily, generalNotice: e.target.innerText };
   trackSave(saveDaily({ generalNotice: e.target.innerText }));
 });
@@ -447,6 +586,7 @@ setInterval(() => {
         renderNoticeGeneral();
         renderMorningBanner();
         renderTimetableNow(); // 오늘만 바꿔둔 시간표(periodOverrides)도 자정에 같이 초기화된다.
+        pushBellSchedule(); // 요일이 바뀌었으니 오늘 알림 시각도 다시 계산한다.
       })
       .catch(handleLoadError);
   }
@@ -526,16 +666,11 @@ if ('serviceWorker' in navigator) {
 }
 
 // ---- 타이머 ----
-import { wireTimerWidget } from './timer.js';
-
-wireTimerWidget({
-  presetButtons: Array.from(document.querySelectorAll('.timer-presets button')),
-  customInput: document.getElementById('timerCustomMinutes'),
-  customSetBtn: document.getElementById('timerCustomSetBtn'),
-  displayEl: document.getElementById('timerDisplay'),
-  startBtn: document.getElementById('timerStartBtn'),
-  pauseBtn: document.getElementById('timerPauseBtn'),
-  resetBtn: document.getElementById('timerResetBtn'),
+// 화면에 항상 자리를 차지하지 않도록, 버튼 하나만 두고 누르면 별도 창(팝업)
+// 으로 timer-popup.html을 띄운다. 실제 타이머 로직(js/timer.js)은 그 창에서
+// 돈다 — 여기서는 그냥 새 창을 여는 것뿐이다.
+document.getElementById('openTimerPopupBtn').addEventListener('click', () => {
+  window.open('timer-popup.html', 'classBellTimer', 'width=340,height=460');
 });
 
 // ---- PC 플로팅 위젯 ----
@@ -620,6 +755,41 @@ async function loadInitialData() {
   renderNoticeGeneral();
   renderMorningBanner();
   renderTimetableNow();
+
+  try {
+    const { data } = await fetchBellConfig();
+    if (data) {
+      bellConfig = data;
+    } else {
+      // 서버에 아직 없으면(첫 실행) 기본값을 그대로 올려서 다음부터는 항상 있게 한다.
+      trackSave(saveBellConfig(DEFAULT_BELL_CONFIG));
+    }
+  } catch (err) {
+    handleLoadError(err);
+  }
+  renderBellAdminUI();
+  pushBellSchedule();
+
+  try {
+    const { data } = await fetchAdminPin();
+    if (data && data.pin) {
+      adminPin = data.pin;
+    } else {
+      trackSave(saveAdminPin(adminPin));
+    }
+  } catch (err) {
+    handleLoadError(err);
+  }
 }
+
+document.getElementById('manualRefreshBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('manualRefreshBtn');
+  const status = document.getElementById('manualRefreshStatus');
+  btn.disabled = true;
+  status.textContent = '새로고침 중...';
+  await loadInitialData();
+  status.textContent = '완료 (' + new Date().toLocaleTimeString('ko-KR') + ')';
+  btn.disabled = false;
+});
 
 loadInitialData();

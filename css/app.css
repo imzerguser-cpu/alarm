@@ -56,6 +56,7 @@
 .notice-general {
   min-height: 2.4em; padding: 10px; border-radius: 8px; background: #0e1420;
   color: #fff; margin-bottom: 14px; white-space: pre-wrap;
+  outline: 1px dashed #ffcc00; /* 편집모드와 무관하게 항상 입력 가능이라 항상 표시 */
 }
 .hiclass-btn {
   padding: 10px 16px; border-radius: 8px; border: none;
@@ -160,7 +161,6 @@ body.edit-mode .admin-only-controls { display: flex; }
   font-weight: normal !important; font-size: 1rem; line-height: 1;
 }
 
-body.edit-mode .notice-general,
 body.edit-mode .s-role,
 body.edit-mode .s-todo,
 body.edit-mode .s-submit {
