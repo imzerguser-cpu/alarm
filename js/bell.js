@@ -371,8 +371,8 @@
   // 최소한의 창구만 열어둔다. Document Picture-in-Picture 창은 이 페이지와
   // 같은 자바스크립트 실행 환경(같은 window)을 공유하므로 그대로 호출된다.
   //
-  // setSchedule: main.js/tablet-display.js가 오늘 시간표(Firestore)와 알림
-  // 설정(bellConfig)을 조합해 계산한 "오늘 알림 목록"을 여기로 밀어 넣는다.
+  // setSchedule: main.js가 오늘 시간표(Firestore)와 알림 설정(bellConfig)을
+  // 조합해 계산한 "오늘 알림 목록"을 여기로 밀어 넣는다.
   // bell.js 자체는 시간표를 모르고 그냥 {time, message} 목록을 받아 그 시각에
   // 말해주는 역할만 한다 — 계산은 js/bell-schedule.js(순수 함수)가 한다.
   window.classBell = {

@@ -938,7 +938,6 @@ function enterRoom(roomId) {
 function showRoomShareInfo(roomId) {
   document.getElementById('roomShareCode').textContent = roomId;
   document.getElementById('roomShareLinkMain').textContent = buildRoomUrl('index.html', roomId);
-  document.getElementById('roomShareLinkTablet').textContent = buildRoomUrl('tablet-display.html', roomId);
   roomShareBox.hidden = false;
 }
 

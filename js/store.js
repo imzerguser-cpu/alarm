@@ -17,8 +17,8 @@ export const db = initializeFirestore(app, {
 export { shouldResetDaily, deleteField };
 
 // 여러 선생님이 같은 앱을 각자 반 데이터로 따로 쓸 수 있도록, 모든 문서를
-// rooms/{roomId}/... 밑에 둔다. main.js/tablet-display.js는 페이지를 시작할
-// 때(교실 코드가 정해진 뒤) 가장 먼저 setRoomId()를 호출해야 하고, 그 전에는
+// rooms/{roomId}/... 밑에 둔다. main.js는 페이지를 시작할 때(교실 코드가
+// 정해진 뒤) 가장 먼저 setRoomId()를 호출해야 하고, 그 전에는
 // 아래 fetch*/save* 함수를 쓸 수 없다(교실이 안 정해진 채로 아무 데나 읽고
 // 쓰면 안 되므로 일부러 예외를 던진다).
 let currentRoomId = null;

@@ -1,7 +1,7 @@
 // 오늘 시간표(요일별 과목)와 알림 설정(bellConfig)을 조합해 "몇 시에 무슨
 // 말을 할지"를 계산하는 순수 함수 모음. DOM/Firestore를 몰라서 테스트하기 쉽다.
-// 실제 화면(main.js, tablet-display.js)은 이 결과를 window.classBell.setSchedule()
-// 로 js/bell.js에 넘겨서 그대로 재생시킨다.
+// 실제 화면(main.js)은 이 결과를 window.classBell.setSchedule()로 js/bell.js에
+// 넘겨서 그대로 재생시킨다.
 
 export const DEFAULT_BREAK_TEMPLATE = '{쉬는시간}이 {분}분 남았습니다. 화장실에 다녀오고 {다음과목} 수업을 준비하세요.';
 

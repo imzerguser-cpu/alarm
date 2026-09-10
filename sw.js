@@ -1,12 +1,10 @@
 // sw.js
-const CACHE_NAME = 'classroom-alarm-v17';
+const CACHE_NAME = 'classroom-alarm-v18';
 const APP_SHELL = [
   './',
   './index.html',
-  './tablet-display.html',
   './css/app.css',
   './manifest.json',
-  './manifest-display.json',
   './js/bell.js',
   './js/bell-schedule.js',
   './js/daily-reset.js',
@@ -21,7 +19,6 @@ const APP_SHELL = [
   './js/schedule-times.js',
   './js/seed-data.js',
   './js/store.js',
-  './js/tablet-display.js',
   './js/timer.js',
   './js/timetable.js',
 ];

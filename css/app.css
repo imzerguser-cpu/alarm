@@ -107,12 +107,13 @@
 }
 .timetable-row.current { background: #ffcc00; color: #111; }
 .timetable-row .tt-left {
-  /* "09:00~09:40"/"중간놀이시간" 같은 가장 긴 라벨도 안 접히게 여유를 두고
-     고정한다 — 이 값이 실제 글자 폭보다 좁으면(예: 나중에 폰트를 키우면)
+  /* "오전 10:30~10:50"/"중간놀이시간" 같은 가장 긴 라벨도 안 접히게 여유를
+     두고 고정한다 — 이 값이 실제 글자 폭보다 좁으면(예: 나중에 폰트를 키우면)
      flex의 기본 min-width가 다시 콘텐츠 크기로 늘려버려 조용히 어긋난다.
      그래서 폭을 고정하는 것과 함께 줄바꿈 자체를 막아(white-space) 항상
-     이 폭 안에서 한 줄로 유지되게 한다. */
-  flex: 0 0 108px;
+     이 폭 안에서 한 줄로 유지되게 한다. 12시간(오전/오후) 표기로 바꾸면서
+     24시간 표기보다 길어져 108px에서 124px로 다시 넓혔다. */
+  flex: 0 0 124px;
   display: flex; flex-direction: column; align-items: center; text-align: center;
   line-height: 1.25;
 }
