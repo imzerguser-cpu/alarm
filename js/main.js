@@ -6,6 +6,7 @@ import {
   fetchSchedule, saveSchedule, fetchScheduleNotes, saveScheduleNotes,
   fetchRoster, saveRoster, saveDaily, ensureTodayDaily, deleteField,
   fetchBellConfig, saveBellConfig, fetchAdminPin, saveAdminPin,
+  fetchUiSettings, saveUiSettings,
 } from './store.js';
 import { formatHiClassText } from './notice-format.js';
 import { isMorningActive } from './schedule-times.js';
@@ -72,6 +73,13 @@ let daily = {
 };
 let bellConfig = DEFAULT_BELL_CONFIG;
 let adminPin = '1234';
+let uiSettings = { studentAccordionDefaultOpen: false };
+// 학생별로 지금 아코디언이 펼쳐져 있는지 여부. 기본값(uiSettings)은 "새로
+// 등장하는" 학생(처음 렌더되거나, 관리자가 기본값을 바꿨을 때)에만 적용되고,
+// 이미 사용자가 직접 펼치거나 접은 학생은 재렌더링(renderStudentList) 중에도
+// 그 상태 그대로 유지된다 — 한 명 펼쳐서 보는 중에 다른 곳 저장 때문에 화면이
+// 다시 그려지면서 도로 접혀버리면 안 되기 때문.
+let studentOpenState = {};
 
 // 오늘 시간표(currentSchedule)와 알림 설정(bellConfig)을 조합해 "오늘 몇 시에
 // 무슨 말을 할지" 목록을 계산하고, js/bell.js에 그대로 밀어 넣는다. bell.js는
@@ -121,18 +129,51 @@ function renderStudentList() {
   if (container.contains(document.activeElement)) return;
   container.innerHTML = '';
   for (const student of roster) {
+    const no = student.no;
+    // 처음 보는 학생(첫 렌더, 새로 추가된 학생)만 기본값을 적용한다 — 이미
+    // 사용자가 펼치거나 접어둔 학생은 여기서 건드리지 않는다.
+    if (!(no in studentOpenState)) {
+      studentOpenState[no] = uiSettings.studentAccordionDefaultOpen;
+    }
+    const isOpen = studentOpenState[no];
+
     const row = document.createElement('div');
-    row.className = 'student-row';
-    row.dataset.no = String(student.no);
+    row.className = 'student-row' + (isOpen ? ' open' : '');
+    row.dataset.no = String(no);
 
-    const name = document.createElement('div');
+    const header = document.createElement('button');
+    header.type = 'button';
+    header.className = 's-header';
+
+    const name = document.createElement('span');
     name.className = 's-name';
-    name.textContent = `${student.no}. ${student.name}`;
+    name.textContent = `${no}. ${student.name}`;
 
+    const chevron = document.createElement('span');
+    chevron.className = 's-chevron';
+    chevron.textContent = isOpen ? '▲' : '▼';
+
+    header.append(name, chevron);
+
+    const details = document.createElement('div');
+    details.className = 's-details';
+    details.hidden = !isOpen;
+
+    header.addEventListener('click', () => {
+      const nowOpen = !studentOpenState[no];
+      studentOpenState[no] = nowOpen;
+      row.classList.toggle('open', nowOpen);
+      chevron.textContent = nowOpen ? '▲' : '▼';
+      details.hidden = !nowOpen;
+    });
+
+    const roleField = document.createElement('label');
+    roleField.className = 's-field';
+    const roleLabel = document.createElement('span');
+    roleLabel.textContent = '1인1역';
     const role = document.createElement('input');
     role.className = 's-role';
     role.type = 'text';
-    role.placeholder = '1인1역';
     role.value = student.role || '';
     role.disabled = !window.__EDIT_MODE__;
     role.addEventListener('change', () => {
@@ -142,27 +183,55 @@ function renderStudentList() {
       roster = roster.map((s) => (s.no === student.no ? { ...s, role: role.value } : s));
       trackSave(saveRoster(roster));
     });
+    roleField.append(roleLabel, role);
 
+    const todoField = document.createElement('label');
+    todoField.className = 's-field';
+    const todoLabel = document.createElement('span');
+    todoLabel.textContent = '해야할일';
     const todo = document.createElement('input');
     todo.className = 's-todo';
     todo.type = 'text';
-    todo.placeholder = '해야할일';
     todo.value = (daily.todos && daily.todos[String(student.no)]) || '';
     todo.disabled = !window.__EDIT_MODE__;
     todo.addEventListener('change', () => saveStudentField('todos', student.no, todo.value));
+    todoField.append(todoLabel, todo);
 
+    const submitField = document.createElement('label');
+    submitField.className = 's-field';
+    const submitLabel = document.createElement('span');
+    submitLabel.textContent = '제출할것';
     const submit = document.createElement('input');
     submit.className = 's-submit';
     submit.type = 'text';
-    submit.placeholder = '제출할것';
     submit.value = (daily.submits && daily.submits[String(student.no)]) || '';
     submit.disabled = !window.__EDIT_MODE__;
     submit.addEventListener('change', () => saveStudentField('submits', student.no, submit.value));
+    submitField.append(submitLabel, submit);
 
-    row.append(name, role, todo, submit);
+    details.append(roleField, todoField, submitField);
+    row.append(header, details);
     container.appendChild(row);
   }
 }
+
+function updateStudentAccordionDefaultBtn() {
+  const btn = document.getElementById('studentAccordionDefaultBtn');
+  if (!btn) return;
+  btn.textContent = `학생 목록 기본: ${uiSettings.studentAccordionDefaultOpen ? '펼침' : '접힘'}`;
+}
+
+document.getElementById('studentAccordionDefaultBtn').addEventListener('click', () => {
+  const nextValue = !uiSettings.studentAccordionDefaultOpen;
+  uiSettings = { ...uiSettings, studentAccordionDefaultOpen: nextValue };
+  trackSave(saveUiSettings({ studentAccordionDefaultOpen: nextValue }));
+  updateStudentAccordionDefaultBtn();
+  // 바로 눈에 보이는 효과가 있어야 관리자가 방금 바꾼 게 뭔지 확인할 수
+  // 있다 — 지금 펼쳐/접힌 학생들도 새 기본값으로 전부 다시 맞춘다.
+  studentOpenState = {};
+  for (const student of roster) studentOpenState[student.no] = nextValue;
+  renderStudentList();
+});
 
 function renderNoticeGeneral() {
   const el = document.getElementById('noticeGeneralText');
@@ -819,6 +888,16 @@ async function loadInitialData() {
   } catch (err) {
     handleLoadError(err);
   }
+
+  try {
+    const { data } = await fetchUiSettings();
+    if (data && typeof data.studentAccordionDefaultOpen === 'boolean') {
+      uiSettings = { ...uiSettings, studentAccordionDefaultOpen: data.studentAccordionDefaultOpen };
+    }
+  } catch (err) {
+    handleLoadError(err);
+  }
+  updateStudentAccordionDefaultBtn();
 }
 
 document.getElementById('manualRefreshBtn').addEventListener('click', async () => {

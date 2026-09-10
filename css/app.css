@@ -45,16 +45,22 @@
 .student-section {
   background: #1a2233; border-radius: 14px; padding: 20px;
 }
-.student-list { display: flex; flex-direction: column; gap: 14px; }
-/* 학생 한 명 = 이름 줄 + 1인1역/해야할일/제출할것 세 줄이 세로로 이어진다. */
-.student-row {
-  display: flex; flex-direction: column; gap: 6px; background: #0e1420;
-  border-radius: 8px; padding: 10px 12px;
+.student-list { display: flex; flex-direction: column; gap: 8px; }
+/* 학생 한 명 = 아코디언 한 칸. 헤더(이름)를 누르면 1인1역/해야할일/제출할것
+   세 칸(.s-details)이 펼쳐지거나 접힌다 — 학생 수가 많은 반에서 목록 전체가
+   한눈에 들어오도록 기본은 접힌 상태로 시작한다(관리자 모드에서 바꿀 수 있음). */
+.student-row { background: #0e1420; border-radius: 8px; overflow: hidden; }
+.s-header {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; background: none; border: none; cursor: pointer; text-align: left;
+  font: inherit; color: inherit;
 }
-.student-row .s-name { font-weight: bold; color: #ffcc00; font-size: 1.1rem; }
-.student-row .s-role,
-.student-row .s-todo,
-.student-row .s-submit {
+.s-header .s-name { font-weight: bold; color: #ffcc00; font-size: 1.05rem; }
+.s-header .s-chevron { color: #9aa7bd; font-size: 0.8rem; }
+.s-details { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
+.s-details[hidden] { display: none; }
+.s-field { display: flex; flex-direction: column; gap: 2px; font-size: 0.75rem; color: #9aa7bd; }
+.s-field input {
   width: 100%; color: #fff; font-size: 0.9rem;
   background: transparent; border: none; border-bottom: 1px solid #2a344a; padding: 4px 2px;
 }

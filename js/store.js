@@ -76,8 +76,23 @@ export async function fetchAdminPin() {
   return { data: snap.exists() ? snap.data() : null, fromCache: snap.metadata.fromCache };
 }
 
+// merge:true — 이 문서(settings/admin)에는 PIN 말고 화면 설정(예:
+// studentAccordionDefaultOpen)도 같이 들어있으므로, PIN만 저장할 때 그
+// 설정을 지우면 안 된다.
 export function saveAdminPin(pin) {
-  return setDoc(doc(db, 'settings', 'admin'), { pin });
+  return setDoc(doc(db, 'settings', 'admin'), { pin }, { merge: true });
+}
+
+// 학생 목록 아코디언(1인1역/해야할일/제출할것)의 기본 펼침 상태. PIN과 같은
+// 문서(settings/admin)에 같이 저장한다 — 둘 다 "기기 상관없이 똑같아야 하는
+// 화면 설정"이라는 점이 같기 때문이다.
+export async function fetchUiSettings() {
+  const snap = await getDoc(doc(db, 'settings', 'admin'));
+  return { data: snap.exists() ? snap.data() : null, fromCache: snap.metadata.fromCache };
+}
+
+export function saveUiSettings(data) {
+  return setDoc(doc(db, 'settings', 'admin'), data, { merge: true });
 }
 
 export async function ensureTodayDaily(todayDateKey) {
