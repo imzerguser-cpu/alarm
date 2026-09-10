@@ -17,6 +17,7 @@
     .clock-card {
       background: #0e1420; border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 16px;
     }
+    #currentPeriodInfo { font-size: 1.3rem; font-weight: bold; color: #fff; min-height: 1.5em; }
     #nextAlarmInfo { margin-top: 8px; font-size: 1.1rem; color: #ffcc00; min-height: 1.4em; }
 
     .control-bar {
@@ -105,13 +106,12 @@
 
   <div class="app-grid">
     <header class="top-clock">
-      <div id="clockNow">00:00:00</div>
-      <div id="clockDate"></div>
-      <span id="bellRunningStatus" class="bell-running-status"></span>
+      <div class="clock-line">
+        <span id="clockDate"></span>
+        <span id="clockNow">00:00:00</span>
+      </div>
       <span id="connStatus" class="conn-status" hidden>⚠ 연결 끊김 — 마지막으로 받은 내용을 보여주고 있어요</span>
       <span id="saveStatus" class="save-status" hidden>⚠ 저장 실패 — 방금 입력한 내용이 저장되지 않았습니다. 인터넷 연결을 확인해주세요.</span>
-      <button id="manualRefreshBtn" class="manual-refresh-btn">🔄 지금 새로고침</button>
-      <span id="manualRefreshStatus" class="manual-refresh-status"></span>
     </header>
 
     <div id="morningBanner" class="morning-banner" hidden>
@@ -133,6 +133,7 @@
           <h1>🔔 교실 수업 알리미</h1>
 
           <div class="clock-card">
+            <div id="currentPeriodInfo"></div>
             <div id="nextAlarmInfo"></div>
           </div>
 
@@ -199,6 +200,11 @@
         <section id="noticeSection" class="notice-section">
           <div id="noticeGeneralText" class="notice-general"></div>
           <button id="hiclassCopyBtn" class="hiclass-btn">📋 하이클래스용 복사</button>
+          <div class="notice-footer-status">
+            <span id="bellRunningStatus" class="bell-running-status"></span>
+            <button id="manualRefreshBtn" class="manual-refresh-btn">🔄 지금 새로고침</button>
+            <span id="manualRefreshStatus" class="manual-refresh-status"></span>
+          </div>
         </section>
       </section>
 

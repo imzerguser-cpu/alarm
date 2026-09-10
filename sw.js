@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'classroom-alarm-v8';
+const CACHE_NAME = 'classroom-alarm-v15';
 const APP_SHELL = [
   './',
   './index.html',
@@ -26,8 +26,14 @@ const APP_SHELL = [
 ];
 
 self.addEventListener('install', (event) => {
+  // { cache: 'no-store' }가 여기도 필요하다 — 없으면 cache.addAll이 내부적으로
+  // 하는 fetch()가 브라우저 자체 HTTP 캐시를 그대로 따를 수 있어서, CACHE_NAME을
+  // 새 버전으로 올려도 그 "새" 캐시 안에 낡은 파일이 그대로 복사돼 들어갈 수
+  // 있다(런타임 fetch 핸들러에서 이미 한 번 고쳤던 것과 같은 종류의 문제).
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(APP_SHELL.map((url) => new Request(url, { cache: 'no-store' })))
+    )
   );
   self.skipWaiting();
 });

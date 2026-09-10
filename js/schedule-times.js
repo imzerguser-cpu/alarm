@@ -39,3 +39,22 @@ export function isMorningActive(date) {
   const nowMin = date.getHours() * 60 + date.getMinutes();
   return nowMin >= toMinutes(morning.start) && nowMin < toMinutes(morning.end);
 }
+
+// 학생들이 24시간 표기(예: 14:10)를 헷갈려해서, 화면에 보여줄 때는 12시간
+// 표기(오전/오후)로 바꾼다. PERIODS/저장 데이터 자체는 계속 24시간 "HH:MM"을
+// 쓴다 — 여기 두 함수는 오직 화면에 보여줄 문자열을 만드는 용도다.
+export function formatTime12(hh, mm) {
+  const period = hh < 12 ? '오전' : '오후';
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return `${period} ${h12}:${String(mm).padStart(2, '0')}`;
+}
+
+// 시작~끝 범위는 시작 시각에만 오전/오후를 붙인다(끝까지 매번 반복하면
+// 시간표 칸이 좁아서 글자가 넘친다 — 등하교 시간대 안에서는 끝 시각만 보고도
+// 오전/오후를 헷갈릴 상황이 사실상 없다).
+export function formatTimeRange12(startHHMM, endHHMM) {
+  const [sh, sm] = startHHMM.split(':').map(Number);
+  const [eh, em] = endHHMM.split(':').map(Number);
+  const endH12 = eh % 12 === 0 ? 12 : eh % 12;
+  return `${formatTime12(sh, sm)}~${endH12}:${String(em).padStart(2, '0')}`;
+}
