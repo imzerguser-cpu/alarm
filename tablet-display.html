@@ -58,12 +58,43 @@
       margin-top: 14px; padding: 8px 16px; border-radius: 8px; border: none; background: #111; color: #ffcc00;
       font-weight: bold; cursor: pointer;
     }
+
+    .room-gate {
+      position: fixed; inset: 0; background: #0e1420; z-index: 1000;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .room-gate[hidden] { display: none; }
+    .room-gate-box { max-width: 340px; text-align: center; }
+    .room-gate-box p { color: #9aa7bd; font-size: 0.85rem; margin-bottom: 16px; }
+    .room-gate-box input {
+      width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #3a4864;
+      background: #1a2233; color: #fff; font-size: 1.1rem; text-align: center;
+      text-transform: uppercase; margin-bottom: 10px;
+    }
+    .room-gate-box button {
+      width: 100%; padding: 10px; border-radius: 8px; border: none; background: #4285F4;
+      color: #fff; font-weight: bold; cursor: pointer;
+    }
+    .room-gate-message { color: #ff6b6b; font-size: 0.8rem; min-height: 1.2em; margin-top: 8px; }
   </style>
 </head>
 <body>
   <div id="alarmBanner" class="alarm-banner">
     <div id="alarmBannerText"></div>
     <button id="alarmBannerCloseBtn">닫기</button>
+  </div>
+
+  <div id="roomGate" class="room-gate" hidden>
+    <div class="room-gate-box">
+      <h1 style="color:#ffcc00; font-size:1.1rem;">🏫 교실 코드 입력</h1>
+      <p>
+        컴퓨터의 index.html에서 만든 교실 코드를 입력하세요.
+        아직 만든 적이 없다면 먼저 컴퓨터에서 index.html을 열어 교실을 만들어주세요.
+      </p>
+      <input id="roomGateInput" type="text" placeholder="예: AB12CD" maxlength="10">
+      <button id="roomGateJoinBtn">입장하기</button>
+      <div id="roomGateMessage" class="room-gate-message"></div>
+    </div>
   </div>
 
   <div class="display-wrap">

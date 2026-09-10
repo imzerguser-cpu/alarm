@@ -266,6 +266,8 @@
   </div>
 
   <div class="toolbar">
+    <span id="roomCodeDisplay" class="room-code-display"></span>
+    <button id="changeRoomBtn" class="toolbar-link" style="border:none; cursor:pointer;">🏫 교실 바꾸기/공유</button>
     <button id="editModeBtn">🔐 관리자 모드</button>
     <button id="openTimerPopupBtn">⏱ 타이머 열기</button>
 
@@ -338,6 +340,36 @@
         <button id="overrideApplyBtn">오늘만 적용</button>
       </div>
       <p class="tt-edit-hint">여기서 바꾼 내용은 오늘만 적용되고, 내일은 기본 시간표로 자동으로 돌아갑니다.</p>
+    </div>
+  </div>
+
+  <div id="roomSelectOverlay" class="pin-modal" hidden>
+    <div class="pin-modal-inner room-select-inner">
+      <button id="roomSelectCloseBtn" class="pin-cancel-btn" aria-label="닫기" hidden>✕</button>
+      <p>🏫 교실 선택</p>
+      <p class="tt-edit-hint">
+        이 알리미는 "교실 코드"로 반마다 데이터를 따로 보관해서, 다른 선생님과
+        같은 주소를 쓰면서도 시간표·명단이 서로 섞이지 않게 해줘요.
+        처음이면 새로 만들고, 이미 코드가 있으면(다른 기기에서 만든 경우나
+        다른 선생님이 알려준 경우) 그 코드를 입력하세요.
+      </p>
+      <button id="createRoomBtn">✨ 새 교실 만들기</button>
+      <div class="room-join-row">
+        <input id="joinRoomInput" type="text" placeholder="교실 코드 입력 (예: AB12CD)" maxlength="10">
+        <button id="joinRoomBtn">입장하기</button>
+      </div>
+      <div id="roomSelectMessage" class="admin-save-message"></div>
+      <div id="roomShareBox" class="room-share-box" hidden>
+        <p>이 교실 코드: <strong id="roomShareCode"></strong></p>
+        <p class="tt-edit-hint">
+          같은 반의 다른 기기(태블릿, 전자칠판, 다른 컴퓨터)에서도 이 화면을
+          열고 이 코드를 입력해야 시간표·알림이 서로 연결됩니다.
+          아래 주소를 그 기기 브라우저에 직접 입력하면 코드 입력 없이 바로 들어갑니다.
+        </p>
+        <p class="room-share-link">index.html: <span id="roomShareLinkMain"></span></p>
+        <p class="room-share-link">태블릿 화면: <span id="roomShareLinkTablet"></span></p>
+        <button id="roomShareContinueBtn">확인, 계속하기</button>
+      </div>
     </div>
   </div>
 

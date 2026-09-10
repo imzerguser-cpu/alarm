@@ -16,49 +16,67 @@ export const db = initializeFirestore(app, {
 
 export { shouldResetDaily, deleteField };
 
+// 여러 선생님이 같은 앱을 각자 반 데이터로 따로 쓸 수 있도록, 모든 문서를
+// rooms/{roomId}/... 밑에 둔다. main.js/tablet-display.js는 페이지를 시작할
+// 때(교실 코드가 정해진 뒤) 가장 먼저 setRoomId()를 호출해야 하고, 그 전에는
+// 아래 fetch*/save* 함수를 쓸 수 없다(교실이 안 정해진 채로 아무 데나 읽고
+// 쓰면 안 되므로 일부러 예외를 던진다).
+let currentRoomId = null;
+
+export function setRoomId(roomId) {
+  currentRoomId = roomId;
+}
+
+function roomDoc(collectionName, docId) {
+  if (!currentRoomId) {
+    throw new Error('교실 코드가 설정되지 않았습니다. setRoomId()를 먼저 호출해야 합니다.');
+  }
+  return doc(db, 'rooms', currentRoomId, collectionName, docId);
+}
+
 // 편집은 항상 이 화면(태블릿)에서만 한다는 전제로, 실시간 구독(onSnapshot)
 // 대신 페이지를 열 때 한 번만 불러온다. 편집한 내용은 저장할 때 화면에도
 // 바로 반영하므로(main.js) 구독 없이도 화면은 항상 최신이다. 다른 기기에서
 // 편집했다면 이 화면은 다시 열어야 반영된다 — 그 대신 계속 연결을 붙들고
 // 있지 않아도 되니 훨씬 단순하고, 배터리·데이터도 덜 쓴다.
 export async function fetchSchedule() {
-  const snap = await getDoc(doc(db, 'schedule', 'weekly'));
+  const snap = await getDoc(roomDoc('schedule', 'weekly'));
   return { data: snap.exists() ? snap.data() : {}, fromCache: snap.metadata.fromCache };
 }
 
 export function saveSchedule(weeklyData) {
-  return setDoc(doc(db, 'schedule', 'weekly'), weeklyData);
+  return setDoc(roomDoc('schedule', 'weekly'), weeklyData);
 }
 
 // 교시별 과목 아래에 교사가 덧붙이는 세부 내용(선택 사항). schedule/weekly와
 // 같은 요일→교시 키 구조를 쓰지만, 값이 있는 교시만 채워지는 성긴(sparse) 문서다.
 export async function fetchScheduleNotes() {
-  const snap = await getDoc(doc(db, 'schedule', 'notes'));
+  const snap = await getDoc(roomDoc('schedule', 'notes'));
   return { data: snap.exists() ? snap.data() : {}, fromCache: snap.metadata.fromCache };
 }
 
 export function saveScheduleNotes(notesData) {
-  return setDoc(doc(db, 'schedule', 'notes'), notesData);
+  return setDoc(roomDoc('schedule', 'notes'), notesData);
 }
 
 export async function fetchRoster() {
-  const snap = await getDoc(doc(db, 'roster', 'students'));
+  const snap = await getDoc(roomDoc('roster', 'students'));
   return { data: snap.exists() ? (snap.data().list || []) : [], fromCache: snap.metadata.fromCache };
 }
 
 export function saveRoster(list) {
-  return setDoc(doc(db, 'roster', 'students'), { list });
+  return setDoc(roomDoc('roster', 'students'), { list });
 }
 
 export function saveDaily(data) {
-  return setDoc(doc(db, 'daily', 'current'), data, { merge: true });
+  return setDoc(roomDoc('daily', 'current'), data, { merge: true });
 }
 
 // 수업종 알림 설정(아침 고정 알림, 쉬는시간 기본 멘트, 과목별 특별 알림).
 // 기기마다 따로 있던 PIN과 달리 이건 원래도 "모든 기기에 똑같이 반영"돼야
 // 맞는 값이라 Firestore에 둔다.
 export async function fetchBellConfig() {
-  const snap = await getDoc(doc(db, 'bellConfig', 'current'));
+  const snap = await getDoc(roomDoc('bellConfig', 'current'));
   return { data: snap.exists() ? snap.data() : null, fromCache: snap.metadata.fromCache };
 }
 
@@ -66,13 +84,13 @@ export async function fetchBellConfig() {
 // 화면 섹션에서 따로 저장하므로, 매번 문서 전체를 다시 보내지 않고 바뀐
 // 필드만 보내도 나머지가 지워지지 않아야 한다(saveDaily와 같은 이유).
 export function saveBellConfig(data) {
-  return setDoc(doc(db, 'bellConfig', 'current'), data, { merge: true });
+  return setDoc(roomDoc('bellConfig', 'current'), data, { merge: true });
 }
 
 // 관리자 PIN. 예전에는 기기별 localStorage에 따로 저장했는데, "한 곳에서
 // 바꾸면 다른 기기에도 반영돼야 한다"는 요청으로 여기로 옮겼다.
 export async function fetchAdminPin() {
-  const snap = await getDoc(doc(db, 'settings', 'admin'));
+  const snap = await getDoc(roomDoc('settings', 'admin'));
   return { data: snap.exists() ? snap.data() : null, fromCache: snap.metadata.fromCache };
 }
 
@@ -80,23 +98,23 @@ export async function fetchAdminPin() {
 // studentAccordionDefaultOpen)도 같이 들어있으므로, PIN만 저장할 때 그
 // 설정을 지우면 안 된다.
 export function saveAdminPin(pin) {
-  return setDoc(doc(db, 'settings', 'admin'), { pin }, { merge: true });
+  return setDoc(roomDoc('settings', 'admin'), { pin }, { merge: true });
 }
 
 // 학생 목록 아코디언(1인1역/해야할일/제출할것)의 기본 펼침 상태. PIN과 같은
 // 문서(settings/admin)에 같이 저장한다 — 둘 다 "기기 상관없이 똑같아야 하는
 // 화면 설정"이라는 점이 같기 때문이다.
 export async function fetchUiSettings() {
-  const snap = await getDoc(doc(db, 'settings', 'admin'));
+  const snap = await getDoc(roomDoc('settings', 'admin'));
   return { data: snap.exists() ? snap.data() : null, fromCache: snap.metadata.fromCache };
 }
 
 export function saveUiSettings(data) {
-  return setDoc(doc(db, 'settings', 'admin'), data, { merge: true });
+  return setDoc(roomDoc('settings', 'admin'), data, { merge: true });
 }
 
 export async function ensureTodayDaily(todayDateKey) {
-  const ref = doc(db, 'daily', 'current');
+  const ref = roomDoc('daily', 'current');
   const snap = await getDoc(ref);
   const current = snap.exists() ? snap.data() : null;
   if (!current || shouldResetDaily(current.date, todayDateKey)) {

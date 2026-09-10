@@ -159,6 +159,26 @@ body.edit-mode .admin-only-controls { display: flex; }
   font-weight: bold; text-decoration: none; font-size: 0.9rem;
 }
 
+.room-code-display {
+  padding: 10px 12px; border-radius: 8px; background: #0e1420; color: #ffcc00;
+  font-weight: bold; font-size: 0.9rem;
+}
+
+.room-select-inner { width: min(420px, 92vw); text-align: left; }
+.room-select-inner > p:first-child { text-align: center; font-size: 1.1rem; margin-bottom: 12px; }
+#createRoomBtn { width: 100%; margin-bottom: 14px; padding: 12px; font-size: 1rem; }
+.room-join-row { display: flex; gap: 8px; }
+.room-join-row input {
+  flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #3a4864;
+  background: #0e1420; color: #fff; font-size: 1rem; text-transform: uppercase;
+}
+.room-join-row button { padding: 10px 16px; border-radius: 8px; border: none; background: #4285F4; color: #fff; font-weight: bold; cursor: pointer; }
+.room-share-box { margin-top: 16px; padding-top: 14px; border-top: 1px dashed #3a4864; }
+.room-share-box p { margin: 6px 0; }
+.room-share-box strong { color: #ffcc00; font-size: 1.3rem; letter-spacing: 2px; }
+.room-share-link { font-size: 0.78rem; color: #9aa7bd; word-break: break-all; }
+#roomShareContinueBtn { width: 100%; margin-top: 10px; padding: 10px; }
+
 .pin-modal {
   position: fixed; inset: 0; background: rgba(0,0,0,0.6);
   display: flex; align-items: center; justify-content: center; z-index: 1000;

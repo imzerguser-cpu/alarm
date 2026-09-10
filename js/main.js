@@ -6,8 +6,11 @@ import {
   fetchSchedule, saveSchedule, fetchScheduleNotes, saveScheduleNotes,
   fetchRoster, saveRoster, saveDaily, ensureTodayDaily, deleteField,
   fetchBellConfig, saveBellConfig, fetchAdminPin, saveAdminPin,
-  fetchUiSettings, saveUiSettings,
+  fetchUiSettings, saveUiSettings, setRoomId,
 } from './store.js';
+import {
+  resolveRoomId, generateRoomId, normalizeRoomId, saveRoomId, buildRoomUrl,
+} from './room.js';
 import { formatHiClassText } from './notice-format.js';
 import { isMorningActive } from './schedule-times.js';
 import { computeTodayBellSchedule, DEFAULT_BELL_CONFIG } from './bell-schedule.js';
@@ -910,4 +913,74 @@ document.getElementById('manualRefreshBtn').addEventListener('click', async () =
   btn.disabled = false;
 });
 
-loadInitialData();
+// ---- 교실(room) 선택 ----
+// 여러 선생님이 같은 페이지를 각자 반 데이터로 따로 쓸 수 있도록, Firestore
+// 문서를 rooms/{roomId}/... 밑에 둔다(js/store.js). 교실 코드가 정해지기
+// 전까지는 어떤 fetch*/save*도 호출하면 안 되므로, 이 코드가 loadInitialData()
+// 호출의 유일한 진입점이다.
+const roomSelectOverlay = document.getElementById('roomSelectOverlay');
+const roomSelectMessage = document.getElementById('roomSelectMessage');
+const roomShareBox = document.getElementById('roomShareBox');
+const roomCodeDisplay = document.getElementById('roomCodeDisplay');
+
+function updateRoomCodeDisplay(roomId) {
+  roomCodeDisplay.textContent = `🏫 교실: ${roomId}`;
+}
+
+function enterRoom(roomId) {
+  saveRoomId(roomId);
+  setRoomId(roomId);
+  updateRoomCodeDisplay(roomId);
+  roomSelectOverlay.hidden = true;
+  loadInitialData();
+}
+
+function showRoomShareInfo(roomId) {
+  document.getElementById('roomShareCode').textContent = roomId;
+  document.getElementById('roomShareLinkMain').textContent = buildRoomUrl('index.html', roomId);
+  document.getElementById('roomShareLinkTablet').textContent = buildRoomUrl('tablet-display.html', roomId);
+  roomShareBox.hidden = false;
+}
+
+document.getElementById('createRoomBtn').addEventListener('click', () => {
+  const roomId = generateRoomId();
+  showRoomShareInfo(roomId);
+  roomSelectMessage.textContent = '';
+  // 바로 입장하지 않고 코드부터 보여준다 — 다른 기기에 옮겨 적을 시간이
+  // 필요하다("확인, 계속하기"를 눌러야 실제로 들어간다).
+  document.getElementById('roomShareContinueBtn').onclick = () => enterRoom(roomId);
+});
+
+document.getElementById('joinRoomBtn').addEventListener('click', () => {
+  const input = document.getElementById('joinRoomInput');
+  const roomId = normalizeRoomId(input.value);
+  if (!roomId) {
+    roomSelectMessage.textContent = '교실 코드를 입력해주세요.';
+    roomSelectMessage.className = 'admin-save-message error';
+    return;
+  }
+  enterRoom(roomId);
+});
+
+document.getElementById('changeRoomBtn').addEventListener('click', () => {
+  // 이미 화면이 그 교실 데이터로 다 채워진 상태라, 이 자리에서 교실만 바꿔
+  // 끼우면 이전 교실의 흔적(캐시된 상태)이 섞일 위험이 있다 — 그냥 새
+  // 주소로 다시 열어서 깨끗하게 시작한다.
+  roomSelectOverlay.hidden = false;
+  document.getElementById('roomSelectCloseBtn').hidden = false;
+  roomShareBox.hidden = true;
+  roomSelectMessage.textContent = '';
+});
+
+document.getElementById('roomSelectCloseBtn').addEventListener('click', () => {
+  roomSelectOverlay.hidden = true;
+});
+
+const initialRoomId = resolveRoomId();
+if (initialRoomId) {
+  setRoomId(initialRoomId);
+  updateRoomCodeDisplay(initialRoomId);
+  loadInitialData();
+} else {
+  roomSelectOverlay.hidden = false;
+}
