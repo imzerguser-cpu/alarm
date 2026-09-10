@@ -267,28 +267,34 @@ body.edit-mode .student-add-form { display: flex; }
   color: #fff; font-weight: bold; cursor: pointer;
 }
 
-.timer-section {
-  background: #1a2233; border-radius: 14px; padding: 16px 20px;
+/* 타이머는 새 창이 아니라 이 페이지 안 모달(index.html의 #timerModal)로
+   뜬다 — 새 창을 열면 브라우저가 이 페이지를 백그라운드로 취급해 수업종
+   알림 체크가 늦어지거나 멈출 수 있기 때문(js/bell.js는 이 문서의 타이머가
+   계속 살아있어야 정상 동작한다). */
+.timer-modal-inner { width: min(320px, 90vw); }
+.timer-modal-inner .timer-presets {
+  display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
 }
-.timer-heading { margin: 0 0 10px; font-size: 1.05rem; color: #ffcc00; text-align: center; }
-.timer-widget {
-  display: flex; align-items: center; justify-content: center;
-  gap: 8px; flex-wrap: wrap;
-}
-.timer-presets { display: flex; gap: 6px; }
-.timer-widget button {
+.timer-modal-inner .timer-presets button,
+.timer-modal-inner #timerCustomSetBtn {
   padding: 6px 12px; border-radius: 8px; border: none; background: #34495e;
-  color: #fff; cursor: pointer; font-size: 0.85rem;
+  color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: normal;
 }
 #timerCustomMinutes {
   width: 60px; padding: 6px; border-radius: 8px; border: 1px solid #3a4864;
-  background: #0e1420; color: #fff;
+  background: #0e1420; color: #fff; text-align: center;
 }
 .timer-display {
-  font-size: 1.6rem; font-weight: bold; color: #ffcc00; min-width: 80px; text-align: center;
+  font-size: 2.2rem; font-weight: bold; color: #ffcc00; text-align: center; margin: 14px 0;
 }
 .timer-display.done { color: #e74c3c; }
-.timer-controls { display: flex; gap: 6px; }
+.timer-modal-inner .timer-controls {
+  display: flex; gap: 6px; justify-content: center;
+}
+.timer-modal-inner .timer-controls button {
+  padding: 8px 14px; border-radius: 8px; border: none; background: #34495e; color: #fff;
+  font-weight: bold; cursor: pointer;
+}
 
 .toolbar button:disabled { background: #333; color: #777; cursor: not-allowed; }
 

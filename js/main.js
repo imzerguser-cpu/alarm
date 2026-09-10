@@ -666,11 +666,32 @@ if ('serviceWorker' in navigator) {
 }
 
 // ---- 타이머 ----
-// 화면에 항상 자리를 차지하지 않도록, 버튼 하나만 두고 누르면 별도 창(팝업)
-// 으로 timer-popup.html을 띄운다. 실제 타이머 로직(js/timer.js)은 그 창에서
-// 돈다 — 여기서는 그냥 새 창을 여는 것뿐이다.
+// 화면에 항상 자리를 차지하지 않도록 버튼 하나만 두고, 누르면 같은 페이지
+// 안의 모달로 띄운다. 예전에는 window.open()으로 새 창을 열었는데, 그러면
+// 브라우저가 이 페이지(수업종 알림이 돌아가는 원본 화면)를 백그라운드로
+// 취급해 시계·알림 체크(js/bell.js의 tick)가 늦어지거나 멈추는 문제가
+// 있었다 — 타이머를 쓰는 동안에도 알림은 항상 정상 동작해야 하므로, 새
+// 창/탭을 아예 열지 않는 모달 방식으로 바꿨다.
+import { wireTimerWidget } from './timer.js';
+
+wireTimerWidget({
+  presetButtons: Array.from(document.querySelectorAll('#timerModal .timer-presets button')),
+  customInput: document.getElementById('timerCustomMinutes'),
+  customSetBtn: document.getElementById('timerCustomSetBtn'),
+  displayEl: document.getElementById('timerDisplay'),
+  startBtn: document.getElementById('timerStartBtn'),
+  pauseBtn: document.getElementById('timerPauseBtn'),
+  resetBtn: document.getElementById('timerResetBtn'),
+});
+
 document.getElementById('openTimerPopupBtn').addEventListener('click', () => {
-  window.open('timer-popup.html', 'classBellTimer', 'width=340,height=460');
+  document.getElementById('timerModal').hidden = false;
+});
+document.getElementById('timerModalCloseBtn').addEventListener('click', () => {
+  document.getElementById('timerModal').hidden = true;
+});
+document.getElementById('timerModal').addEventListener('click', (e) => {
+  if (e.target.id === 'timerModal') document.getElementById('timerModal').hidden = true;
 });
 
 // ---- PC 플로팅 위젯 ----
