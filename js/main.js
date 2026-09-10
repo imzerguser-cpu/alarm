@@ -84,6 +84,7 @@ function pushBellSchedule() {
     periods: PERIODS,
     daySubjects: currentSchedule[dayKey] || {},
     bellConfig,
+    periodOverrides: daily.periodOverrides,
   });
   window.classBell.setSchedule(items);
 }
@@ -375,6 +376,7 @@ document.getElementById('overrideApplyBtn').addEventListener('click', () => {
   daily = { ...daily, periodOverrides: updated };
   trackSave(saveDaily({ periodOverrides: { [overrideTargetPeriodId]: { subject, note } } }));
   renderTimetableNow();
+  pushBellSchedule(); // 오늘만 바꾼 과목이 있으면 알림도 그 과목 기준으로 다시 계산한다.
   closeOverrideModal();
 });
 
@@ -387,6 +389,7 @@ document.getElementById('overrideResetBtn').addEventListener('click', () => {
   // 지우려면 deleteField() 센티널을 그 키의 값으로 보내야 한다.
   trackSave(saveDaily({ periodOverrides: { [overrideTargetPeriodId]: deleteField() } }));
   renderTimetableNow();
+  pushBellSchedule(); // 기본 시간표로 되돌렸으니 알림도 기본 과목 기준으로 다시 계산한다.
   closeOverrideModal();
 });
 

@@ -43,16 +43,21 @@ function findPrecedingBreakLabel(periods, targetPeriod) {
 }
 
 // periods: schedule-times.js의 PERIODS. daySubjects: currentSchedule[dayKey]
-// (교시id -> 과목명). bellConfig: DEFAULT_BELL_CONFIG와 같은 모양.
-export function computeTodayBellSchedule({ periods, daySubjects, bellConfig }) {
+// (교시id -> 과목명). bellConfig: DEFAULT_BELL_CONFIG와 같은 모양. periodOverrides:
+// daily/current 문서의 오늘만 변경(daily.periodOverrides) — 현장학습처럼 그날
+// 하루만 있는 일정이면 여기서 그 교시의 과목을 덮어써서, 알림도 기본 시간표가
+// 아니라 오늘 실제로 뭘 하는지에 맞춰 울리게 한다.
+export function computeTodayBellSchedule({ periods, daySubjects, bellConfig, periodOverrides }) {
   const config = bellConfig || DEFAULT_BELL_CONFIG;
+  const overrides = periodOverrides || {};
   const items = (config.morningAlerts || []).map((a) => ({ ...a }));
 
   for (const period of periods) {
     // 1교시 앞은 "쉬는 시간"이 아니라 아침활동 시간이라 morningAlerts가 이미
     // 담당한다. 교시가 아닌 항목(아침활동/중간놀이/점심시간 자체)은 건너뛴다.
     if (period.kind !== 'class' || period.id === 'p1') continue;
-    const subject = (daySubjects || {})[period.id];
+    const override = overrides[period.id];
+    const subject = (override && override.subject) || (daySubjects || {})[period.id];
     if (!subject) continue; // 오늘 그 교시가 비어 있으면 알림도 없다.
 
     const rule = (config.subjectRules || []).find((r) => r.subject === subject);

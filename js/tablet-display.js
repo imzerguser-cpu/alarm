@@ -37,6 +37,7 @@ function pushBellSchedule() {
     periods: PERIODS,
     daySubjects: currentSchedule[dayKey] || {},
     bellConfig,
+    periodOverrides,
   });
   window.classBell.setSchedule(items);
 }

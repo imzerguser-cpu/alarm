@@ -64,4 +64,38 @@ describe('computeTodayBellSchedule', () => {
     // Only the 3 fixed morning alerts should be present, nothing computed for p2..p8.
     expect(rows).toHaveLength(DEFAULT_BELL_CONFIG.morningAlerts.length);
   });
+
+  describe('periodOverrides ("오늘만" 임시 변경)', () => {
+    it('uses the override subject instead of the base timetable subject', () => {
+      // p3 is 과학 on the base timetable, but overridden to a field trip today.
+      const overrides = { p3: { subject: '현장학습', note: '' } };
+      const rows = computeTodayBellSchedule({
+        periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG, periodOverrides: overrides,
+      });
+      // p3 starts 10:50, preceded by 중간놀이시간, no rule for "현장학습" -> default template, 2 minutes before.
+      const row = rows.find((r) => r.time === '10:48');
+      expect(row).toBeTruthy();
+      expect(row.message).toBe('중간놀이시간이 2분 남았습니다. 화장실에 다녀오고 현장학습 수업을 준비하세요.');
+      // The 과학 rule (4분전, 09:46 belongs to p2 not p3) should not fire for p3 anymore.
+      expect(rows.some((r) => r.time === '10:46')).toBe(false);
+    });
+
+    it('applies a matching subject rule to the overridden subject too', () => {
+      // p6 (피아노, no rule normally) overridden to 체육 today -> should pick up the 체육 rule.
+      const overrides = { p6: { subject: '체육', note: '' } };
+      const rows = computeTodayBellSchedule({
+        periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG, periodOverrides: overrides,
+      });
+      // p6 starts 14:10, 체육 rule is 4분전 -> 14:06.
+      const row = rows.find((r) => r.time === '14:06');
+      expect(row).toBeTruthy();
+      expect(row.message).toBe('화장실에 다녀오고 가방을 챙겨서 강당으로 이동하세요.');
+    });
+
+    it('is unaffected when periodOverrides is omitted or empty', () => {
+      const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG, periodOverrides: {} });
+      const row = rows.find((r) => r.time === '09:46');
+      expect(row.message).toBe('화장실에 다녀오고 교과서, 필기도구를 챙겨서 과학실로 이동하세요.');
+    });
+  });
 });
