@@ -140,12 +140,24 @@
     });
   }
 
+  // "닫기"를 누르면 아직 안 끝난 반복도 바로 멈춰야 한다. cancel()만 부르면
+  // 지금 말하던 한 번은 멎지만(onerror로 speakOnceAsync가 resolve된다) 반복문이
+  // 곧바로 다음 회차를 다시 말하기 시작하므로, 이 플래그로 반복 자체를 끊는다.
+  let stopCurrentAlarmSpeech = false;
+
   async function speakRepeated(text, times) {
+    stopCurrentAlarmSpeech = false;
     window.speechSynthesis.cancel();
     for (let i = 0; i < times; i += 1) {
+      if (stopCurrentAlarmSpeech) break;
       // eslint-disable-next-line no-await-in-loop
       await speakOnceAsync(text);
     }
+  }
+
+  function stopAlarmSpeech() {
+    stopCurrentAlarmSpeech = true;
+    window.speechSynthesis.cancel();
   }
 
   // 태블릿에서 다른 앱을 보고 있으면 이 탭은 백그라운드로 밀려나 음성 재생이
@@ -194,6 +206,9 @@
   function hideBanner() {
     alarmBannerEl.classList.remove('show');
     clearTimeout(bannerHideTimer);
+    // 배너가 사라지는데 음성만 계속 반복되면 어색하다 — "닫기"로 직접 닫든
+    // 20초 뒤 자동으로 닫히든, 배너가 닫히는 시점엔 항상 음성도 같이 멈춘다.
+    stopAlarmSpeech();
   }
 
   function currentHms() {

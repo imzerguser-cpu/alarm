@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'classroom-alarm-v18';
+const CACHE_NAME = 'classroom-alarm-v19';
 const APP_SHELL = [
   './',
   './index.html',
