@@ -9,7 +9,7 @@ export const DEFAULT_BELL_CONFIG = {
   morningAlerts: [
     { time: '08:45', message: '교실 청소, 자리 정리를 하고 가정통신문을 확인해서 제출하세요.' },
     { time: '08:50', message: '유창성 읽기를 시작합니다. 1분씩 세 번 반복하세요.' },
-    { time: '08:55', message: '1교시 수업을 준비하세요.' },
+    { time: '08:55', message: '{다음과목} 수업을 준비하세요.' },
   ],
   breakDefaultMinutes: 2,
   breakDefaultTemplate: DEFAULT_BREAK_TEMPLATE,
@@ -50,7 +50,17 @@ function findPrecedingBreakLabel(periods, targetPeriod) {
 export function computeTodayBellSchedule({ periods, daySubjects, bellConfig, periodOverrides }) {
   const config = bellConfig || DEFAULT_BELL_CONFIG;
   const overrides = periodOverrides || {};
-  const items = (config.morningAlerts || []).map((a) => ({ ...a }));
+
+  // 아침 고정 알림(morningAlerts)은 "1교시를 준비하는 아침 시간" 동안 나가는
+  // 알림이라, 메시지에 {다음과목}이 들어있으면 오늘 1교시 과목(오늘만 바꾼
+  // 과목이 있으면 그걸 우선)으로 채운다. 관리자가 그 자리를 안 써놨으면
+  // (기존처럼 "1교시 수업을 준비하세요." 그대로) 아무 영향이 없다.
+  const p1Override = overrides.p1;
+  const p1Subject = (p1Override && p1Override.subject) || (daySubjects || {}).p1 || '';
+  const items = (config.morningAlerts || []).map((a) => ({
+    ...a,
+    message: p1Subject ? a.message.split('{다음과목}').join(p1Subject) : a.message,
+  }));
 
   for (const period of periods) {
     // 1교시 앞은 "쉬는 시간"이 아니라 아침활동 시간이라 morningAlerts가 이미

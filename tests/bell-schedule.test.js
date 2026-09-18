@@ -58,6 +58,33 @@ describe('computeTodayBellSchedule', () => {
     expect(row.message).toBe('화장실에 다녀오고 강당으로 이동하세요.');
   });
 
+  it('substitutes {다음과목} in a morning alert with today\'s 1교시 subject', () => {
+    const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
+    const row = rows.find((r) => r.time === '08:55');
+    expect(row.message).toBe('국어 수업을 준비하세요.');
+  });
+
+  it('uses the periodOverrides subject for p1 in the morning alert too', () => {
+    const overrides = { p1: { subject: '대바늘 뜨기', note: '' } };
+    const rows = computeTodayBellSchedule({
+      periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG, periodOverrides: overrides,
+    });
+    const row = rows.find((r) => r.time === '08:55');
+    expect(row.message).toBe('대바늘 뜨기 수업을 준비하세요.');
+  });
+
+  it('leaves a morning alert message untouched when it has no {다음과목} placeholder', () => {
+    const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
+    const row = rows.find((r) => r.time === '08:45');
+    expect(row.message).toBe('교실 청소, 자리 정리를 하고 가정통신문을 확인해서 제출하세요.');
+  });
+
+  it('leaves the {다음과목} placeholder untouched when no 1교시 subject is known at all', () => {
+    const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects: {}, bellConfig: DEFAULT_BELL_CONFIG });
+    const row = rows.find((r) => r.time === '08:55');
+    expect(row.message).toBe('{다음과목} 수업을 준비하세요.');
+  });
+
   it('skips periods with no subject for that day', () => {
     const sparse = { p1: '국어' };
     const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects: sparse, bellConfig: DEFAULT_BELL_CONFIG });
