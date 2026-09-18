@@ -7,9 +7,11 @@ import {
   fetchRoster, saveRoster, saveDaily, ensureTodayDaily, deleteField,
   fetchBellConfig, saveBellConfig, fetchAdminPin, saveAdminPin,
   fetchUiSettings, saveUiSettings, setRoomId,
+  subscribeSchedule, subscribeScheduleNotes, subscribeRoster, subscribeDaily,
+  subscribeBellConfig, subscribeAdminSettings,
 } from './store.js';
 import {
-  resolveRoomId, generateRoomId, normalizeRoomId, saveRoomId, buildRoomUrl,
+  resolveRoomId, generateRoomId, normalizeRoomId, saveRoomId, buildRoomUrl, checkRoomExists,
 } from './room.js';
 import { formatHiClassText } from './notice-format.js';
 import { isMorningActive } from './schedule-times.js';
@@ -903,6 +905,67 @@ async function loadInitialData() {
   updateStudentAccordionDefaultBtn();
 }
 
+// ---- 실시간 동기화 ----
+// 컴퓨터에서 시간표/명단/알림 설정을 바꾸면 태블릿·전자칠판에도 새로고침
+// 없이 바로 반영돼야 한다는 요청으로 추가했다. loadInitialData()는 처음
+// 화면을 채우는 일회성 조회(+ 비어 있으면 기본값 올리기)를 그대로 맡고,
+// 여기서부터는 onSnapshot 구독으로 "다른 기기가 바꾼 내용"을 실시간으로
+// 받아 그대로 반영한다. 교실을 바꿀 때는 이전 교실을 구독한 채로 남아있으면
+// 안 되므로 항상 stopLiveSync() 후 다시 시작한다.
+let liveSyncUnsubscribers = [];
+
+function stopLiveSync() {
+  liveSyncUnsubscribers.forEach((unsubscribe) => unsubscribe());
+  liveSyncUnsubscribers = [];
+}
+
+function startLiveSync() {
+  stopLiveSync();
+
+  liveSyncUnsubscribers.push(subscribeSchedule(({ data, fromCache }) => {
+    if (Object.keys(data).length) currentSchedule = data;
+    setConnStatus(fromCache);
+    renderTimetableNow();
+    pushBellSchedule();
+  }, handleLoadError));
+
+  liveSyncUnsubscribers.push(subscribeScheduleNotes(({ data }) => {
+    currentNotes = data || {};
+    renderTimetableNow();
+  }, handleLoadError));
+
+  liveSyncUnsubscribers.push(subscribeRoster(({ data }) => {
+    roster = data.length ? data : INITIAL_ROSTER;
+    renderStudentList();
+  }, handleLoadError));
+
+  liveSyncUnsubscribers.push(subscribeDaily(({ data }) => {
+    if (!data) return; // ensureTodayDaily가 아직 문서를 만들기 전의 짧은 순간
+    daily = data;
+    renderStudentList();
+    renderNoticeGeneral();
+    renderMorningBanner();
+    renderTimetableNow();
+    pushBellSchedule();
+  }, handleLoadError));
+
+  liveSyncUnsubscribers.push(subscribeBellConfig(({ data }) => {
+    if (!data) return;
+    bellConfig = data;
+    renderBellAdminUI();
+    pushBellSchedule();
+  }, handleLoadError));
+
+  liveSyncUnsubscribers.push(subscribeAdminSettings(({ data }) => {
+    if (!data) return;
+    if (data.pin) adminPin = data.pin;
+    if (typeof data.studentAccordionDefaultOpen === 'boolean') {
+      uiSettings = { ...uiSettings, studentAccordionDefaultOpen: data.studentAccordionDefaultOpen };
+    }
+    updateStudentAccordionDefaultBtn();
+  }, handleLoadError));
+}
+
 document.getElementById('manualRefreshBtn').addEventListener('click', async () => {
   const btn = document.getElementById('manualRefreshBtn');
   const status = document.getElementById('manualRefreshStatus');
@@ -921,18 +984,45 @@ document.getElementById('manualRefreshBtn').addEventListener('click', async () =
 const roomSelectOverlay = document.getElementById('roomSelectOverlay');
 const roomSelectMessage = document.getElementById('roomSelectMessage');
 const roomShareBox = document.getElementById('roomShareBox');
+const roomCurrentSection = document.getElementById('roomCurrentSection');
+const roomSwitchSection = document.getElementById('roomSwitchSection');
 const roomCodeDisplay = document.getElementById('roomCodeDisplay');
+let activeRoomId = null;
 
 function updateRoomCodeDisplay(roomId) {
   roomCodeDisplay.textContent = `🏫 교실: ${roomId}`;
 }
 
+// 클립보드 복사 버튼 하나를 이렇게 계속 재사용한다 — textEl의 지금 내용을
+// 복사하고, 버튼 글자를 잠깐 "복사됨!"으로 바꿔 눌렀다는 걸 보여준다.
+function wireCopyButton(buttonEl, textEl) {
+  const originalLabel = buttonEl.textContent;
+  buttonEl.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(textEl.textContent);
+      buttonEl.textContent = '복사됨!';
+      buttonEl.classList.add('copied');
+    } catch (err) {
+      buttonEl.textContent = '복사 실패';
+    }
+    setTimeout(() => {
+      buttonEl.textContent = originalLabel;
+      buttonEl.classList.remove('copied');
+    }, 1800);
+  });
+}
+
+wireCopyButton(document.getElementById('roomCurrentCopyMainBtn'), document.getElementById('roomCurrentLinkMain'));
+wireCopyButton(document.getElementById('roomShareCopyMainBtn'), document.getElementById('roomShareLinkMain'));
+
 function enterRoom(roomId) {
   saveRoomId(roomId);
   setRoomId(roomId);
+  activeRoomId = roomId;
   updateRoomCodeDisplay(roomId);
   roomSelectOverlay.hidden = true;
   loadInitialData();
+  startLiveSync();
 }
 
 function showRoomShareInfo(roomId) {
@@ -941,12 +1031,66 @@ function showRoomShareInfo(roomId) {
   roomShareBox.hidden = false;
 }
 
-document.getElementById('createRoomBtn').addEventListener('click', () => {
-  const roomId = generateRoomId();
-  showRoomShareInfo(roomId);
+// "교실 바꾸기/공유" 버튼으로 열었을 때: 지금 교실 코드/링크부터 보여주고,
+// "다른 교실로 바꾸기"를 눌러야 새로 만들기/입장하기 화면이 나온다. 처음
+// 교실을 아직 안 고른 상태(activeRoomId 없음)라면 이 안내를 건너뛰고 바로
+// 새로 만들기/입장하기 화면으로 간다.
+function openRoomSelectOverlay() {
+  roomSelectOverlay.hidden = false;
   roomSelectMessage.textContent = '';
-  // 바로 입장하지 않고 코드부터 보여준다 — 다른 기기에 옮겨 적을 시간이
-  // 필요하다("확인, 계속하기"를 눌러야 실제로 들어간다).
+  roomShareBox.hidden = true;
+  if (activeRoomId) {
+    document.getElementById('roomCurrentCode').textContent = activeRoomId;
+    document.getElementById('roomCurrentLinkMain').textContent = buildRoomUrl('index.html', activeRoomId);
+    roomCurrentSection.hidden = false;
+    roomSwitchSection.hidden = true;
+    document.getElementById('roomSelectCloseBtn').hidden = false;
+  } else {
+    roomCurrentSection.hidden = true;
+    roomSwitchSection.hidden = false;
+  }
+}
+
+document.getElementById('showRoomSwitchBtn').addEventListener('click', () => {
+  roomCurrentSection.hidden = true;
+  roomSwitchSection.hidden = false;
+});
+
+document.getElementById('createRoomBtn').addEventListener('click', async () => {
+  const customInput = document.getElementById('customRoomNameInput');
+  const typed = customInput.value.trim();
+  const createBtn = document.getElementById('createRoomBtn');
+
+  if (!typed) {
+    const randomRoomId = generateRoomId();
+    showRoomShareInfo(randomRoomId);
+    roomSelectMessage.textContent = '';
+    document.getElementById('roomShareContinueBtn').onclick = () => enterRoom(randomRoomId);
+    return;
+  }
+
+  const roomId = normalizeRoomId(typed);
+  if (!roomId) {
+    roomSelectMessage.textContent = '사용할 수 없는 이름이에요. 다른 이름을 입력해주세요.';
+    roomSelectMessage.className = 'admin-save-message error';
+    return;
+  }
+
+  createBtn.disabled = true;
+  roomSelectMessage.textContent = '이름 확인 중...';
+  roomSelectMessage.className = 'admin-save-message';
+  const exists = await checkRoomExists(roomId);
+  createBtn.disabled = false;
+
+  if (exists) {
+    roomSelectMessage.textContent =
+      '이미 사용 중인 이름이에요. 그 교실이 맞다면 아래 "교실 코드 입력"에 같은 이름을 넣어 입장하세요. 아니면 다른 이름을 써주세요.';
+    roomSelectMessage.className = 'admin-save-message error';
+    return;
+  }
+
+  roomSelectMessage.textContent = '';
+  showRoomShareInfo(roomId);
   document.getElementById('roomShareContinueBtn').onclick = () => enterRoom(roomId);
 });
 
@@ -961,15 +1105,7 @@ document.getElementById('joinRoomBtn').addEventListener('click', () => {
   enterRoom(roomId);
 });
 
-document.getElementById('changeRoomBtn').addEventListener('click', () => {
-  // 이미 화면이 그 교실 데이터로 다 채워진 상태라, 이 자리에서 교실만 바꿔
-  // 끼우면 이전 교실의 흔적(캐시된 상태)이 섞일 위험이 있다 — 그냥 새
-  // 주소로 다시 열어서 깨끗하게 시작한다.
-  roomSelectOverlay.hidden = false;
-  document.getElementById('roomSelectCloseBtn').hidden = false;
-  roomShareBox.hidden = true;
-  roomSelectMessage.textContent = '';
-});
+document.getElementById('changeRoomBtn').addEventListener('click', openRoomSelectOverlay);
 
 document.getElementById('roomSelectCloseBtn').addEventListener('click', () => {
   roomSelectOverlay.hidden = true;
@@ -978,8 +1114,10 @@ document.getElementById('roomSelectCloseBtn').addEventListener('click', () => {
 const initialRoomId = resolveRoomId();
 if (initialRoomId) {
   setRoomId(initialRoomId);
+  activeRoomId = initialRoomId;
   updateRoomCodeDisplay(initialRoomId);
   loadInitialData();
+  startLiveSync();
 } else {
-  roomSelectOverlay.hidden = false;
+  openRoomSelectOverlay();
 }

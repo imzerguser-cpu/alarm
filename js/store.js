@@ -1,7 +1,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
-  doc, setDoc, getDoc, deleteField,
+  doc, setDoc, getDoc, deleteField, onSnapshot,
 } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 import { shouldResetDaily } from './daily-reset.js';
@@ -111,6 +111,51 @@ export async function fetchUiSettings() {
 
 export function saveUiSettings(data) {
   return setDoc(roomDoc('settings', 'admin'), data, { merge: true });
+}
+
+// ---- 실시간 구독 ----
+// 컴퓨터에서 바꾼 내용이 태블릿/전자칠판 화면에도 새로고침 없이 바로
+// 반영돼야 한다는 요청으로 추가했다. 예전에(tablet-display.html) 20초마다
+// getDoc()으로 계속 다시 읽는 폴링 방식을 썼다가 기기 하나당 하루
+// 5,760~17,280번씩 읽어들여 비용 문제로 그 화면 자체를 없앤 적이 있다
+// (자세한 경위는 git log 참고). onSnapshot()은 그 문제를 피한다 — 최초 1회
+// 읽은 뒤로는 실제로 값이 바뀔 때만 새 스냅샷을 받으므로, 하루 종일 켜둬도
+// 아무도 편집하지 않으면 추가 비용이 거의 없다.
+export function subscribeSchedule(onData, onError) {
+  return onSnapshot(roomDoc('schedule', 'weekly'), (snap) => {
+    onData({ data: snap.exists() ? snap.data() : {}, fromCache: snap.metadata.fromCache });
+  }, onError);
+}
+
+export function subscribeScheduleNotes(onData, onError) {
+  return onSnapshot(roomDoc('schedule', 'notes'), (snap) => {
+    onData({ data: snap.exists() ? snap.data() : {}, fromCache: snap.metadata.fromCache });
+  }, onError);
+}
+
+export function subscribeRoster(onData, onError) {
+  return onSnapshot(roomDoc('roster', 'students'), (snap) => {
+    onData({ data: snap.exists() ? (snap.data().list || []) : [], fromCache: snap.metadata.fromCache });
+  }, onError);
+}
+
+export function subscribeDaily(onData, onError) {
+  return onSnapshot(roomDoc('daily', 'current'), (snap) => {
+    onData({ data: snap.exists() ? snap.data() : null, fromCache: snap.metadata.fromCache });
+  }, onError);
+}
+
+export function subscribeBellConfig(onData, onError) {
+  return onSnapshot(roomDoc('bellConfig', 'current'), (snap) => {
+    onData({ data: snap.exists() ? snap.data() : null, fromCache: snap.metadata.fromCache });
+  }, onError);
+}
+
+// PIN과 studentAccordionDefaultOpen이 같이 들어있는 문서(settings/admin).
+export function subscribeAdminSettings(onData, onError) {
+  return onSnapshot(roomDoc('settings', 'admin'), (snap) => {
+    onData({ data: snap.exists() ? snap.data() : null, fromCache: snap.metadata.fromCache });
+  }, onError);
 }
 
 export async function ensureTodayDaily(todayDateKey) {

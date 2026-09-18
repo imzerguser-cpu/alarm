@@ -165,20 +165,32 @@ body.edit-mode .admin-only-controls { display: flex; }
   font-weight: bold; font-size: 0.9rem;
 }
 
-.room-select-inner { width: min(420px, 92vw); text-align: left; }
-.room-select-inner > p:first-child { text-align: center; font-size: 1.1rem; margin-bottom: 12px; }
+.room-select-inner { width: min(420px, 92vw); text-align: left; max-height: 80vh; overflow-y: auto; }
+.room-select-inner > p:first-child,
+#roomSwitchSection > p:first-child { text-align: center; font-size: 1.1rem; margin-bottom: 12px; }
+.room-select-inner .override-field { margin-bottom: 10px; }
 #createRoomBtn { width: 100%; margin-bottom: 14px; padding: 12px; font-size: 1rem; }
 .room-join-row { display: flex; gap: 8px; }
 .room-join-row input {
   flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #3a4864;
-  background: #0e1420; color: #fff; font-size: 1rem; text-transform: uppercase;
+  background: #0e1420; color: #fff; font-size: 1rem;
 }
 .room-join-row button { padding: 10px 16px; border-radius: 8px; border: none; background: #4285F4; color: #fff; font-weight: bold; cursor: pointer; }
 .room-share-box { margin-top: 16px; padding-top: 14px; border-top: 1px dashed #3a4864; }
 .room-share-box p { margin: 6px 0; }
-.room-share-box strong { color: #ffcc00; font-size: 1.3rem; letter-spacing: 2px; }
-.room-share-link { font-size: 0.78rem; color: #9aa7bd; word-break: break-all; }
+.room-share-box strong { color: #ffcc00; font-size: 1.3rem; letter-spacing: 1px; }
+.room-share-link { font-size: 0.78rem; color: #9aa7bd; word-break: break-all; flex: 1; }
+.room-share-link-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.room-copy-btn {
+  flex: none; padding: 6px 10px; border-radius: 6px; border: none; background: #34495e;
+  color: #fff; font-size: 0.78rem; font-weight: bold; cursor: pointer;
+}
+.room-copy-btn.copied { background: #2ecc71; color: #062; }
 #roomShareContinueBtn { width: 100%; margin-top: 10px; padding: 10px; }
+.room-switch-link {
+  display: block; width: 100%; margin-top: 14px; padding: 8px; background: none; border: none;
+  color: #8fb8ff; font-size: 0.8rem; cursor: pointer; text-decoration: underline;
+}
 
 .pin-modal {
   position: fixed; inset: 0; background: rgba(0,0,0,0.6);

@@ -2,11 +2,21 @@ import { describe, it, expect } from 'vitest';
 import { normalizeRoomId, generateRoomId } from '../js/room.js';
 
 describe('normalizeRoomId', () => {
-  it('uppercases and trims', () => {
-    expect(normalizeRoomId(' ab12cd ')).toBe('AB12CD');
+  it('trims surrounding whitespace but preserves case', () => {
+    expect(normalizeRoomId(' ab12CD ')).toBe('ab12CD');
   });
-  it('strips non-alphanumeric characters (e.g. pasted with dashes/spaces)', () => {
-    expect(normalizeRoomId('ab-12 cd')).toBe('AB12CD');
+  it('preserves custom names, including Korean and internal spaces', () => {
+    expect(normalizeRoomId('3학년 2반')).toBe('3학년 2반');
+  });
+  it('collapses runs of whitespace into a single space', () => {
+    expect(normalizeRoomId('3학년   2반')).toBe('3학년 2반');
+  });
+  it('replaces "/" (illegal in a Firestore document id) with a hyphen', () => {
+    expect(normalizeRoomId('3/2반')).toBe('3-2반');
+  });
+  it('rejects "." and ".." (reserved, invalid Firestore document ids)', () => {
+    expect(normalizeRoomId('.')).toBe('');
+    expect(normalizeRoomId('..')).toBe('');
   });
   it('returns an empty string for null/undefined/empty input', () => {
     expect(normalizeRoomId(null)).toBe('');
