@@ -79,12 +79,14 @@ let daily = {
 let bellConfig = DEFAULT_BELL_CONFIG;
 let adminPin = '1234';
 let uiSettings = { studentAccordionDefaultOpen: false };
-// 학생별로 지금 아코디언이 펼쳐져 있는지 여부. 기본값(uiSettings)은 "새로
-// 등장하는" 학생(처음 렌더되거나, 관리자가 기본값을 바꿨을 때)에만 적용되고,
-// 이미 사용자가 직접 펼치거나 접은 학생은 재렌더링(renderStudentList) 중에도
-// 그 상태 그대로 유지된다 — 한 명 펼쳐서 보는 중에 다른 곳 저장 때문에 화면이
-// 다시 그려지면서 도로 접혀버리면 안 되기 때문.
+// 학생별로 지금 아코디언이 펼쳐져 있는지 여부. studentManualOverride에 없는
+// 학생은 매번 다시 그릴 때마다 "1인1역/해야할일/제출할것 중 하나라도 적혀
+// 있으면 펼침"으로 다시 계산한다 — 그래야 방금 뭔가 적어 넣은 학생이 바로
+// 눈에 띈다. 반면 사용자가 화살표를 직접 눌러 펼치거나 접은 학생은
+// studentManualOverride에 들어가서, 내용이 바뀌어도 그 선택을 그대로 유지한다
+// (안 그러면 일부러 접어둔 걸 다시 펼쳐버리는 등 사용자 조작을 무시하게 된다).
 let studentOpenState = {};
+let studentManualOverride = new Set();
 
 // 오늘 시간표(currentSchedule)와 알림 설정(bellConfig)을 조합해 "오늘 몇 시에
 // 무슨 말을 할지" 목록을 계산하고, js/bell.js에 그대로 밀어 넣는다. bell.js는
@@ -129,16 +131,26 @@ function updateCurrentPeriodInfo(rows) {
 
 function renderStudentList() {
   const container = document.getElementById('studentList');
-  // 포커스가 목록 안에 있는 동안에는 다시 그리지 않는다 — 편집모드 토글처럼
-  // 다른 이유로 렌더가 다시 불릴 때, 교사가 입력 중이던 글자를 지우지 않기 위해서다.
-  if (container.contains(document.activeElement)) return;
+  // 입력칸에 입력 중일 때만 다시 그리지 않는다 — 편집모드 토글이나 다른
+  // 기기의 실시간 반영처럼 다른 이유로 렌더가 다시 불릴 때, 교사가 입력
+  // 중이던 글자를 지우지 않기 위해서다. 아코디언 헤더(버튼)는 클릭한 뒤에도
+  // 포커스가 계속 남아있는데, 그것까지 "입력 중"으로 취급해 막아버리면 헤더를
+  // 한 번이라도 누른 뒤로는 다른 학생의 실시간 변경이 화면에 영원히 반영되지
+  // 않는 문제가 생긴다 — 그래서 실제로 텍스트를 입력 중인 <input>일 때만 막는다.
+  const activeEl = document.activeElement;
+  if (activeEl && activeEl.tagName === 'INPUT' && container.contains(activeEl)) return;
   container.innerHTML = '';
   for (const student of roster) {
     const no = student.no;
-    // 처음 보는 학생(첫 렌더, 새로 추가된 학생)만 기본값을 적용한다 — 이미
-    // 사용자가 펼치거나 접어둔 학생은 여기서 건드리지 않는다.
-    if (!(no in studentOpenState)) {
-      studentOpenState[no] = uiSettings.studentAccordionDefaultOpen;
+    const roleValue = student.role || '';
+    const todoValue = (daily.todos && daily.todos[String(no)]) || '';
+    const submitValue = (daily.submits && daily.submits[String(no)]) || '';
+    const hasContent = !!(roleValue || todoValue || submitValue);
+
+    // 사용자가 직접 펼치거나 접은 적 없는 학생은 매번 다시 계산한다: 내용이
+    // 하나라도 있으면 펼침, 완전히 비어 있으면 관리자 모드의 기본값을 따른다.
+    if (!studentManualOverride.has(no)) {
+      studentOpenState[no] = hasContent || uiSettings.studentAccordionDefaultOpen;
     }
     const isOpen = studentOpenState[no];
 
@@ -167,6 +179,7 @@ function renderStudentList() {
     header.addEventListener('click', () => {
       const nowOpen = !studentOpenState[no];
       studentOpenState[no] = nowOpen;
+      studentManualOverride.add(no); // 직접 누른 뒤로는 내용 유무와 상관없이 이 선택을 유지한다.
       row.classList.toggle('open', nowOpen);
       chevron.textContent = nowOpen ? '▲' : '▼';
       details.hidden = !nowOpen;
@@ -179,7 +192,7 @@ function renderStudentList() {
     const role = document.createElement('input');
     role.className = 's-role';
     role.type = 'text';
-    role.value = student.role || '';
+    role.value = roleValue;
     role.disabled = !window.__EDIT_MODE__;
     role.addEventListener('change', () => {
       // role은 daily가 아니라 roster 배열에 있으므로, 해당 학생 항목만 교체한
@@ -197,7 +210,7 @@ function renderStudentList() {
     const todo = document.createElement('input');
     todo.className = 's-todo';
     todo.type = 'text';
-    todo.value = (daily.todos && daily.todos[String(student.no)]) || '';
+    todo.value = todoValue;
     todo.disabled = !window.__EDIT_MODE__;
     todo.addEventListener('change', () => saveStudentField('todos', student.no, todo.value));
     todoField.append(todoLabel, todo);
@@ -209,7 +222,7 @@ function renderStudentList() {
     const submit = document.createElement('input');
     submit.className = 's-submit';
     submit.type = 'text';
-    submit.value = (daily.submits && daily.submits[String(student.no)]) || '';
+    submit.value = submitValue;
     submit.disabled = !window.__EDIT_MODE__;
     submit.addEventListener('change', () => saveStudentField('submits', student.no, submit.value));
     submitField.append(submitLabel, submit);
@@ -232,9 +245,10 @@ document.getElementById('studentAccordionDefaultBtn').addEventListener('click', 
   trackSave(saveUiSettings({ studentAccordionDefaultOpen: nextValue }));
   updateStudentAccordionDefaultBtn();
   // 바로 눈에 보이는 효과가 있어야 관리자가 방금 바꾼 게 뭔지 확인할 수
-  // 있다 — 지금 펼쳐/접힌 학생들도 새 기본값으로 전부 다시 맞춘다.
+  // 있다 — 지금까지 개별적으로 펼치거나 접어뒀던 선택도 전부 지우고,
+  // 내용 유무 + 새 기본값 기준으로 다시 계산한다.
   studentOpenState = {};
-  for (const student of roster) studentOpenState[student.no] = nextValue;
+  studentManualOverride = new Set();
   renderStudentList();
 });
 
