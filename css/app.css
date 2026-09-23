@@ -60,6 +60,10 @@
 .s-details { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
 .s-details[hidden] { display: none; }
 .s-field { display: flex; flex-direction: column; gap: 2px; font-size: 0.75rem; color: #9aa7bd; }
+/* .s-field 자체가 display:flex를 지정해서, 브라우저 기본 [hidden] 규칙(display:none)
+   보다 이 author 스타일이 우선시돼 hidden 속성만으로는 실제로 안 숨겨진다 —
+   그래서 명시적으로 다시 꺼준다. */
+.s-field[hidden] { display: none; }
 .s-field input {
   width: 100%; color: #fff; font-size: 0.9rem;
   background: transparent; border: none; border-bottom: 1px solid #2a344a; padding: 4px 2px;

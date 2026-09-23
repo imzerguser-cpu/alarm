@@ -202,6 +202,10 @@ function renderStudentList() {
       trackSave(saveRoster(roster));
     });
     roleField.append(roleLabel, role);
+    // 관리자 모드가 아니면(그냥 보는 화면) 내용이 있는 칸만 보여준다 — 비어
+    // 있는 칸까지 다 보이면 줄만 세 개씩 차지해서 정작 적힌 내용이 눈에 잘
+    // 안 띈다. 관리자 모드에서는 새로 입력해야 하니 빈 칸도 항상 보인다.
+    roleField.hidden = !window.__EDIT_MODE__ && !roleValue;
 
     const todoField = document.createElement('label');
     todoField.className = 's-field';
@@ -214,6 +218,7 @@ function renderStudentList() {
     todo.disabled = !window.__EDIT_MODE__;
     todo.addEventListener('change', () => saveStudentField('todos', student.no, todo.value));
     todoField.append(todoLabel, todo);
+    todoField.hidden = !window.__EDIT_MODE__ && !todoValue;
 
     const submitField = document.createElement('label');
     submitField.className = 's-field';
@@ -226,6 +231,7 @@ function renderStudentList() {
     submit.disabled = !window.__EDIT_MODE__;
     submit.addEventListener('change', () => saveStudentField('submits', student.no, submit.value));
     submitField.append(submitLabel, submit);
+    submitField.hidden = !window.__EDIT_MODE__ && !submitValue;
 
     details.append(roleField, todoField, submitField);
     row.append(header, details);
