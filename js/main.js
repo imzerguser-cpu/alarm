@@ -1,4 +1,4 @@
-import { getDayKey, getCurrentPeriodId, DEFAULT_PERIODS } from './schedule-times.js';
+import { getDayKey, getCurrentPeriodId, DEFAULT_PERIODS, applyPeriodOverrides } from './schedule-times.js';
 import { buildTodayRows, renderTimetable } from './timetable.js';
 import { INITIAL_SCHEDULE, INITIAL_ROSTER } from './seed-data.js';
 import { initPinLock } from './pin-lock.js';
@@ -96,11 +96,18 @@ let studentManualOverride = new Set();
 // 무슨 말을 할지" 목록을 계산하고, js/bell.js에 그대로 밀어 넣는다. bell.js는
 // 시간표를 몰라도 되고 그냥 이 결과를 그 시각에 말해주기만 하면 된다(계산은
 // js/bell-schedule.js의 순수 함수가 담당).
+// 오늘만 바꾼 교시 시간(daily.periodOverrides.start/end)을 반영한 오늘 하루용
+// 교시 배열. 관리자 모드의 "교시 시간 설정"(periods, 모든 날짜에 영구 적용)과
+// 달리 이건 자정에 daily 문서가 초기화되면서 자동으로 사라진다.
+function getEffectivePeriods() {
+  return applyPeriodOverrides(periods, daily.periodOverrides);
+}
+
 function pushBellSchedule() {
   if (!window.classBell || !window.classBell.setSchedule) return;
   const dayKey = getDayKey(new Date());
   const items = computeTodayBellSchedule({
-    periods,
+    periods: getEffectivePeriods(),
     daySubjects: currentSchedule[dayKey] || {},
     bellConfig,
     periodOverrides: daily.periodOverrides,
@@ -112,8 +119,9 @@ function pushBellSchedule() {
 function renderTimetableNow() {
   const now = new Date();
   const dayKey = getDayKey(now);
-  const currentPeriodId = getCurrentPeriodId(now, periods);
-  const rows = buildTodayRows(currentSchedule, dayKey, currentPeriodId, currentNotes, daily.periodOverrides, periods);
+  const effectivePeriods = getEffectivePeriods();
+  const currentPeriodId = getCurrentPeriodId(now, effectivePeriods);
+  const rows = buildTodayRows(currentSchedule, dayKey, currentPeriodId, currentNotes, daily.periodOverrides, effectivePeriods);
   const panel = document.getElementById('timetablePanel');
   renderTimetable(panel, rows);
   panel.classList.toggle('editable', window.__EDIT_MODE__);
@@ -275,7 +283,7 @@ function renderNoticeGeneral() {
 function renderMorningBanner() {
   const banner = document.getElementById('morningBanner');
   const textEl = document.getElementById('morningBannerText');
-  const withinWindow = isMorningActive(new Date(), periods);
+  const withinWindow = isMorningActive(new Date(), getEffectivePeriods());
   // 편집모드에서는 시간대·내용과 무관하게 배너를 띄운다 — 그래야 아직 비어 있거나
   // 아침활동 시간이 아닐 때도 교사가 눌러서 입력할 대상이 화면에 존재한다.
   const active = window.__EDIT_MODE__ || (withinWindow && !!daily.morningNotice);
@@ -429,6 +437,8 @@ function selectWeeklyCell(day, periodId) {
 const overrideModal = document.getElementById('overrideModal');
 const overrideSubjectInput = document.getElementById('overrideSubjectInput');
 const overrideNoteInput = document.getElementById('overrideNoteInput');
+const overrideStartInput = document.getElementById('overrideStartInput');
+const overrideEndInput = document.getElementById('overrideEndInput');
 const overrideModalTitle = document.getElementById('overrideModalTitle');
 let overrideTargetPeriodId = null;
 
@@ -449,6 +459,8 @@ function openOverrideModal(periodId) {
   overrideModalTitle.textContent = `${period.label} — 오늘만 내용 바꾸기`;
   overrideSubjectInput.value = existing ? existing.subject : baseSubject;
   overrideNoteInput.value = existing ? (existing.note || '') : ((currentNotes[dayKey] && currentNotes[dayKey][periodId]) || '');
+  overrideStartInput.value = (existing && existing.start) || period.start;
+  overrideEndInput.value = (existing && existing.end) || period.end;
   overrideModal.hidden = false;
   overrideSubjectInput.focus();
 }
@@ -473,11 +485,32 @@ document.getElementById('overrideApplyBtn').addEventListener('click', () => {
     return;
   }
   const note = overrideNoteInput.value.trim();
-  const updated = { ...daily.periodOverrides, [overrideTargetPeriodId]: { subject, note } };
+  const period = periods.find((p) => p.id === overrideTargetPeriodId);
+  const start = overrideStartInput.value;
+  const end = overrideEndInput.value;
+  // 관리자 기본 시간(periods)과 실제로 달라진 경우에만 오늘의 override에 시각을
+  // 남긴다 — 그래야 시각은 안 바꾸고 과목만 다시 저장했을 때 예전에 남아있던
+  // 시각 override가 그대로 유지되는 일이 없다(Firestore merge는 안 보낸 필드를
+  // 지우지 않으므로, 안 바뀐 쪽은 deleteField()로 명시적으로 지워야 한다).
+  const startChanged = !!(period && start && start !== period.start);
+  const endChanged = !!(period && end && end !== period.end);
+
+  const localOverride = { subject, note };
+  if (startChanged) localOverride.start = start;
+  if (endChanged) localOverride.end = end;
+
+  const firestoreOverride = {
+    subject,
+    note,
+    start: startChanged ? start : deleteField(),
+    end: endChanged ? end : deleteField(),
+  };
+
+  const updated = { ...daily.periodOverrides, [overrideTargetPeriodId]: localOverride };
   daily = { ...daily, periodOverrides: updated };
-  trackSave(saveDaily({ periodOverrides: { [overrideTargetPeriodId]: { subject, note } } }));
+  trackSave(saveDaily({ periodOverrides: { [overrideTargetPeriodId]: firestoreOverride } }));
   renderTimetableNow();
-  pushBellSchedule(); // 오늘만 바꾼 과목이 있으면 알림도 그 과목 기준으로 다시 계산한다.
+  pushBellSchedule(); // 오늘만 바꾼 과목/시각이 있으면 알림도 그 기준으로 다시 계산한다.
   closeOverrideModal();
 });
 
@@ -874,12 +907,16 @@ wireFloatingWidgetButton({
   messageEl: document.getElementById('floatingWidgetMessage'),
   getContent: () => {
     const now = new Date();
+    const effectivePeriods = getEffectivePeriods();
     return {
       date: document.getElementById('clockDate').textContent,
       time: document.getElementById('clockNow').textContent,
       // 전자칠판 한 구석에 계속 띄워두고 볼 용도라, 현재 교시 한 줄이 아니라
       // 오늘 시간표 전체를 그대로 넘긴다(본 화면과 같은 buildTodayRows 결과).
-      rows: buildTodayRows(currentSchedule, getDayKey(now), getCurrentPeriodId(now, periods), currentNotes, daily.periodOverrides, periods),
+      rows: buildTodayRows(
+        currentSchedule, getDayKey(now), getCurrentPeriodId(now, effectivePeriods),
+        currentNotes, daily.periodOverrides, effectivePeriods,
+      ),
       nextAlarm: document.getElementById('nextAlarmInfo').textContent,
       // 본 화면의 "연결 끊김" 표시와 같은 값을 그대로 읽어서 플로팅 창에도
       // 띄운다 — PC 화면만 보고 있으면 본 페이지의 경고를 놓치기 쉽다.

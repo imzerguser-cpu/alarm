@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_PERIODS, getDayKey, getCurrentPeriodId, isMorningActive, formatTime12, formatTimeRange12,
+  applyPeriodOverrides,
 } from '../js/schedule-times.js';
 
 function at(h, m) {
@@ -57,6 +58,27 @@ describe('getCurrentPeriodId', () => {
     expect(getCurrentPeriodId(at(9, 45))).toBeNull();
     // ...but still counts as p1 under the customized (later-ending) schedule.
     expect(getCurrentPeriodId(at(9, 45), customPeriods)).toBe('p1');
+  });
+});
+
+describe('applyPeriodOverrides', () => {
+  it('leaves periods untouched when there are no overrides', () => {
+    expect(applyPeriodOverrides(DEFAULT_PERIODS, {})).toEqual(DEFAULT_PERIODS);
+    expect(applyPeriodOverrides(DEFAULT_PERIODS, undefined)).toEqual(DEFAULT_PERIODS);
+  });
+
+  it('overrides only the start/end of the matching period, leaving others alone (오늘만 시간 변경)', () => {
+    const result = applyPeriodOverrides(DEFAULT_PERIODS, { p2: { subject: '창체', start: '10:00' } });
+    const p2 = result.find((p) => p.id === 'p2');
+    expect(p2.start).toBe('10:00');
+    expect(p2.end).toBe(DEFAULT_PERIODS.find((p) => p.id === 'p2').end); // end 안 바꿨으면 그대로.
+    const p1 = result.find((p) => p.id === 'p1');
+    expect(p1).toEqual(DEFAULT_PERIODS.find((p) => p.id === 'p1'));
+  });
+
+  it('ignores an override that only has subject/note (no time change)', () => {
+    const result = applyPeriodOverrides(DEFAULT_PERIODS, { p3: { subject: '현장학습', note: '' } });
+    expect(result.find((p) => p.id === 'p3')).toEqual(DEFAULT_PERIODS.find((p) => p.id === 'p3'));
   });
 });
 

@@ -45,6 +45,24 @@ export function isMorningActive(date, periods = DEFAULT_PERIODS) {
   return nowMin >= toMinutes(morning.start) && nowMin < toMinutes(morning.end);
 }
 
+// 오늘 하루만 특정 교시의 시작/종료 시각을 바꾸고 싶을 때(daily/current 문서의
+// periodOverrides.start/end) 쓴다. 관리자 모드의 "교시 시간 설정"(모든 날짜에
+// 영구 적용)과 달리 이건 daily 문서에 저장되어 자정에 자동으로 사라진다.
+// subject/note 오버라이드는 buildTodayRows/computeTodayBellSchedule이 따로
+// 처리하므로, 여기서는 시간만 본다.
+export function applyPeriodOverrides(periods, periodOverrides) {
+  const overrides = periodOverrides || {};
+  return periods.map((period) => {
+    const override = overrides[period.id];
+    if (!override || (!override.start && !override.end)) return period;
+    return {
+      ...period,
+      start: override.start || period.start,
+      end: override.end || period.end,
+    };
+  });
+}
+
 // 학생들이 24시간 표기(예: 14:10)를 헷갈려해서, 화면에 보여줄 때는 12시간
 // 표기(오전/오후)로 바꾼다. PERIODS/저장 데이터 자체는 계속 24시간 "HH:MM"을
 // 쓴다 — 여기 두 함수는 오직 화면에 보여줄 문자열을 만드는 용도다.
