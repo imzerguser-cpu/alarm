@@ -1,4 +1,9 @@
-export const PERIODS = [
+// 관리자 모드에서 각 교시 시작/종료 시각을 직접 바꿀 수 있다(js/store.js의
+// schedule/periods 문서). 이 배열은 그 값이 서버에 아직 없을 때(첫 실행)
+// 쓰는 기본값이자, periods를 안 넘긴 호출부의 기본 동작이다 — id/kind/label
+// 구성 자체(교시 개수, 순서, 무엇이 '아침활동'/'중간놀이'/'점심시간'인지)는
+// 바뀌지 않고, start/end 시각만 커스터마이즈 대상이다.
+export const DEFAULT_PERIODS = [
   { id: 'morning', label: '아침활동', start: '08:40', end: '09:00', kind: 'fixed' },
   { id: 'p1', label: '1교시', start: '09:00', end: '09:40', kind: 'class' },
   { id: 'p2', label: '2교시', start: '09:50', end: '10:30', kind: 'class' },
@@ -23,9 +28,9 @@ function toMinutes(hhmm) {
   return h * 60 + m;
 }
 
-export function getCurrentPeriodId(date) {
+export function getCurrentPeriodId(date, periods = DEFAULT_PERIODS) {
   const nowMin = date.getHours() * 60 + date.getMinutes();
-  for (const period of PERIODS) {
+  for (const period of periods) {
     if (nowMin >= toMinutes(period.start) && nowMin < toMinutes(period.end)) {
       return period.id;
     }
@@ -33,9 +38,9 @@ export function getCurrentPeriodId(date) {
   return null;
 }
 
-export function isMorningActive(date) {
-  // 시각을 따로 적어두지 않고 PERIODS의 아침활동 항목에서 그대로 가져온다.
-  const morning = PERIODS[0];
+export function isMorningActive(date, periods = DEFAULT_PERIODS) {
+  // 시각을 따로 적어두지 않고 periods의 아침활동 항목(항상 0번째)에서 그대로 가져온다.
+  const morning = periods[0];
   const nowMin = date.getHours() * 60 + date.getMinutes();
   return nowMin >= toMinutes(morning.start) && nowMin < toMinutes(morning.end);
 }

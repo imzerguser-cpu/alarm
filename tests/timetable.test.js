@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildTodayRows } from '../js/timetable.js';
+import { DEFAULT_PERIODS } from '../js/schedule-times.js';
 
 const SAMPLE_TUE = {
   tue: {
@@ -45,5 +46,13 @@ describe('buildTodayRows', () => {
   it('defaults note to an empty string when weeklyNotes is omitted', () => {
     const rows = buildTodayRows(SAMPLE_TUE, 'tue', null);
     expect(rows.find((r) => r.id === 'p2').note).toBe('');
+  });
+
+  it('uses a custom periods array (관리자가 바꾼 교시 시간) for the displayed time range', () => {
+    const customPeriods = DEFAULT_PERIODS.map((p) => (
+      p.id === 'p1' ? { ...p, start: '09:10', end: '09:50' } : p
+    ));
+    const rows = buildTodayRows(SAMPLE_TUE, 'tue', null, undefined, undefined, customPeriods);
+    expect(rows.find((r) => r.id === 'p1').time).toBe('오전 9:10~9:50');
   });
 });

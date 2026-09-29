@@ -1,7 +1,7 @@
 // tests/schedule-times.test.js
 import { describe, it, expect } from 'vitest';
 import {
-  PERIODS, getDayKey, getCurrentPeriodId, isMorningActive, formatTime12, formatTimeRange12,
+  DEFAULT_PERIODS, getDayKey, getCurrentPeriodId, isMorningActive, formatTime12, formatTimeRange12,
 } from '../js/schedule-times.js';
 
 function at(h, m) {
@@ -10,11 +10,11 @@ function at(h, m) {
   return d;
 }
 
-describe('PERIODS', () => {
+describe('DEFAULT_PERIODS', () => {
   it('has 11 defined slots from 아침활동 to 8교시', () => {
-    expect(PERIODS).toHaveLength(11);
-    expect(PERIODS[0].id).toBe('morning');
-    expect(PERIODS.at(-1).id).toBe('p8');
+    expect(DEFAULT_PERIODS).toHaveLength(11);
+    expect(DEFAULT_PERIODS[0].id).toBe('morning');
+    expect(DEFAULT_PERIODS.at(-1).id).toBe('p8');
   });
 });
 
@@ -42,6 +42,21 @@ describe('getCurrentPeriodId', () => {
   });
   it('excludes the end boundary (09:40 is break, not p1)', () => {
     expect(getCurrentPeriodId(at(9, 40))).toBeNull();
+  });
+
+  it('uses a custom periods array when one is passed (관리자가 교시 시간을 바꾼 경우)', () => {
+    // Admin pushed p1 back by 10 minutes: 09:00~09:40 -> 09:10~09:50.
+    const customPeriods = DEFAULT_PERIODS.map((p) => (
+      p.id === 'p1' ? { ...p, start: '09:10', end: '09:50' } : p
+    ));
+    // 09:05 is inside the DEFAULT p1 (09:00~09:40)...
+    expect(getCurrentPeriodId(at(9, 5))).toBe('p1');
+    // ...but falls BEFORE the customized (later-starting) p1 -> no period yet.
+    expect(getCurrentPeriodId(at(9, 5), customPeriods)).toBeNull();
+    // 09:45 is a break under the DEFAULT schedule (p1 already ended at 09:40)...
+    expect(getCurrentPeriodId(at(9, 45))).toBeNull();
+    // ...but still counts as p1 under the customized (later-ending) schedule.
+    expect(getCurrentPeriodId(at(9, 45), customPeriods)).toBe('p1');
   });
 });
 
@@ -78,5 +93,14 @@ describe('isMorningActive', () => {
   });
   it('is false at 08:39', () => {
     expect(isMorningActive(at(8, 39))).toBe(false);
+  });
+
+  it('uses periods[0]\'s custom time when a custom periods array is passed', () => {
+    const customPeriods = DEFAULT_PERIODS.map((p) => (
+      p.id === 'morning' ? { ...p, start: '08:20', end: '08:50' } : p
+    ));
+    expect(isMorningActive(at(8, 30), customPeriods)).toBe(true);
+    // 08:30 is within the DEFAULT morning window (08:40~09:00)? No — 08:30 is before it starts.
+    expect(isMorningActive(at(8, 30))).toBe(false);
   });
 });

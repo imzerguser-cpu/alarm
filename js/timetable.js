@@ -1,15 +1,17 @@
-import { PERIODS, formatTimeRange12 } from './schedule-times.js';
+import { DEFAULT_PERIODS, formatTimeRange12 } from './schedule-times.js';
 
 // periodOverrides: 오늘 날짜에만 적용되는 1회성 변경(daily/current 문서의
 // periodOverrides 필드). 요일 반복 시간표(weeklySchedule/weeklyNotes)보다
 // 우선하고, daily 문서 자체가 자정에 통째로 초기화되므로 다음 날엔 자동으로
 // 사라진다 — 별도의 만료 로직이 필요 없다.
-export function buildTodayRows(weeklySchedule, dayKey, currentPeriodId, weeklyNotes, periodOverrides) {
+export function buildTodayRows(
+  weeklySchedule, dayKey, currentPeriodId, weeklyNotes, periodOverrides, periods = DEFAULT_PERIODS,
+) {
   const daySubjects = (weeklySchedule && weeklySchedule[dayKey]) || {};
   const dayNotes = (weeklyNotes && weeklyNotes[dayKey]) || {};
   const overrides = periodOverrides || {};
   const rows = [];
-  for (const period of PERIODS) {
+  for (const period of periods) {
     const override = overrides[period.id];
     let subject;
     let note;

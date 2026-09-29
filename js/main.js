@@ -1,4 +1,4 @@
-import { getDayKey, getCurrentPeriodId, PERIODS } from './schedule-times.js';
+import { getDayKey, getCurrentPeriodId, DEFAULT_PERIODS } from './schedule-times.js';
 import { buildTodayRows, renderTimetable } from './timetable.js';
 import { INITIAL_SCHEDULE, INITIAL_ROSTER } from './seed-data.js';
 import { initPinLock } from './pin-lock.js';
@@ -7,8 +7,9 @@ import {
   fetchRoster, saveRoster, saveDaily, ensureTodayDaily, deleteField,
   fetchBellConfig, saveBellConfig, fetchAdminPin, saveAdminPin,
   fetchUiSettings, saveUiSettings, setRoomId,
+  fetchPeriods, savePeriods,
   subscribeSchedule, subscribeScheduleNotes, subscribeRoster, subscribeDaily,
-  subscribeBellConfig, subscribeAdminSettings,
+  subscribeBellConfig, subscribeAdminSettings, subscribePeriods,
 } from './store.js';
 import {
   resolveRoomId, generateRoomId, normalizeRoomId, saveRoomId, buildRoomUrl, checkRoomExists,
@@ -24,7 +25,6 @@ import { computeTodayBellSchedule, DEFAULT_BELL_CONFIG } from './bell-schedule.j
 // 먼저 선언돼 있어야 한다(그렇지 않으면 TDZ ReferenceError로 모듈 전체가 멈춘다).
 const WEEK_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
 const DAY_LABELS = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금' };
-const CLASS_PERIODS = PERIODS.filter((p) => p.kind === 'class');
 
 // 편집은 항상 이 화면(태블릿)에서만 한다는 전제로, 실시간 구독(onSnapshot) 대신
 // 페이지를 열 때 한 번만 서버에서 불러온다(아래 loadInitialData). 저장할 때는
@@ -72,6 +72,10 @@ function trackSave(promise) {
 // ---- 상태 (한 번 불러온 뒤로는 저장할 때마다 여기도 같이 갱신한다) ----
 let currentSchedule = INITIAL_SCHEDULE;
 let currentNotes = {};
+// 교시 시작/종료 시각. 관리자 모드에서 편집 가능(교시 시간 설정 카드) —
+// id/kind/label(교시 개수·순서, 무엇이 아침활동/중간놀이/점심시간인지)은
+// DEFAULT_PERIODS 그대로 두고 start/end만 서버에 저장된 값으로 덮어쓴다.
+let periods = DEFAULT_PERIODS;
 let roster = INITIAL_ROSTER;
 let daily = {
   date: toDateKey(new Date()), morningNotice: '', generalNotice: '', todos: {}, submits: {}, periodOverrides: {},
@@ -96,7 +100,7 @@ function pushBellSchedule() {
   if (!window.classBell || !window.classBell.setSchedule) return;
   const dayKey = getDayKey(new Date());
   const items = computeTodayBellSchedule({
-    periods: PERIODS,
+    periods,
     daySubjects: currentSchedule[dayKey] || {},
     bellConfig,
     periodOverrides: daily.periodOverrides,
@@ -108,8 +112,8 @@ function pushBellSchedule() {
 function renderTimetableNow() {
   const now = new Date();
   const dayKey = getDayKey(now);
-  const currentPeriodId = getCurrentPeriodId(now);
-  const rows = buildTodayRows(currentSchedule, dayKey, currentPeriodId, currentNotes, daily.periodOverrides);
+  const currentPeriodId = getCurrentPeriodId(now, periods);
+  const rows = buildTodayRows(currentSchedule, dayKey, currentPeriodId, currentNotes, daily.periodOverrides, periods);
   const panel = document.getElementById('timetablePanel');
   renderTimetable(panel, rows);
   panel.classList.toggle('editable', window.__EDIT_MODE__);
@@ -271,7 +275,7 @@ function renderNoticeGeneral() {
 function renderMorningBanner() {
   const banner = document.getElementById('morningBanner');
   const textEl = document.getElementById('morningBannerText');
-  const withinWindow = isMorningActive(new Date());
+  const withinWindow = isMorningActive(new Date(), periods);
   // 편집모드에서는 시간대·내용과 무관하게 배너를 띄운다 — 그래야 아직 비어 있거나
   // 아침활동 시간이 아닐 때도 교사가 눌러서 입력할 대상이 화면에 존재한다.
   const active = window.__EDIT_MODE__ || (withinWindow && !!daily.morningNotice);
@@ -376,7 +380,10 @@ function renderWeeklyGrid() {
     grid.appendChild(head);
   }
 
-  for (const period of CLASS_PERIODS) {
+  // periods는 관리자가 "교시 시간 설정"에서 바꿀 수 있으므로 매번 새로
+  // 걸러낸다(고정된 상수로 한 번만 계산해두면 시간을 바꿔도 반영이 안 된다).
+  const classPeriods = periods.filter((p) => p.kind === 'class');
+  for (const period of classPeriods) {
     const labelCell = document.createElement('div');
     labelCell.className = 'wg-cell wg-period-label';
     labelCell.textContent = period.label;
@@ -431,7 +438,7 @@ function closeOverrideModal() {
 }
 
 function openOverrideModal(periodId) {
-  const period = PERIODS.find((p) => p.id === periodId);
+  const period = periods.find((p) => p.id === periodId);
   if (!period) return;
   overrideTargetPeriodId = periodId;
   const dayKey = getDayKey(new Date());
@@ -576,6 +583,46 @@ function renderBellAdminUI() {
     bellConfig.breakDefaultTemplate || DEFAULT_BELL_CONFIG.breakDefaultTemplate;
 }
 
+// ---- 관리자 모드: 교시 시간 설정 ----
+// id/kind/label(교시 개수·순서, 무엇이 아침활동/중간놀이/점심시간인지)은
+// 여기서 바꾸지 않는다 — 서버에 저장된 값이 있으면 그 start/end만 가져와
+// 쓰고, 없으면 DEFAULT_PERIODS 그대로다(loadInitialData 참고).
+let draftPeriods = [];
+
+function renderPeriodsRows() {
+  const container = document.getElementById('periodsList');
+  container.innerHTML = '';
+  draftPeriods.forEach((item, index) => {
+    const row = document.createElement('div');
+    row.className = 'schedule-row';
+
+    const label = document.createElement('span');
+    label.className = 'periods-row-label';
+    label.textContent = item.label;
+
+    const startInput = document.createElement('input');
+    startInput.type = 'time';
+    startInput.value = item.start;
+    startInput.addEventListener('change', () => { draftPeriods[index].start = startInput.value; });
+
+    const tilde = document.createElement('span');
+    tilde.textContent = '~';
+
+    const endInput = document.createElement('input');
+    endInput.type = 'time';
+    endInput.value = item.end;
+    endInput.addEventListener('change', () => { draftPeriods[index].end = endInput.value; });
+
+    row.append(label, startInput, tilde, endInput);
+    container.appendChild(row);
+  });
+}
+
+function renderPeriodsAdminUI() {
+  draftPeriods = periods.map((p) => ({ ...p }));
+  renderPeriodsRows();
+}
+
 document.getElementById('addMorningAlertBtn').addEventListener('click', () => {
   draftMorningAlerts.push({ time: '09:00', message: '새 알림 내용을 입력하세요.' });
   renderMorningAlertRows();
@@ -618,6 +665,16 @@ document.getElementById('saveBreakDefaultBtn').addEventListener('click', () => {
   trackSave(saveBellConfig({ breakDefaultMinutes: minutes, breakDefaultTemplate: template }));
   pushBellSchedule();
   const msg = document.getElementById('breakDefaultMessage');
+  msg.textContent = '저장되었습니다.';
+  msg.className = 'admin-save-message';
+});
+
+document.getElementById('savePeriodsBtn').addEventListener('click', () => {
+  periods = draftPeriods.map((p) => ({ ...p }));
+  trackSave(savePeriods(periods));
+  renderTimetableNow(); // 시간표 표시 시각을 바로 반영한다.
+  pushBellSchedule(); // 알림 시각도 바뀐 교시 시간 기준으로 다시 계산한다.
+  const msg = document.getElementById('periodsMessage');
   msg.textContent = '저장되었습니다.';
   msg.className = 'admin-save-message';
 });
@@ -822,7 +879,7 @@ wireFloatingWidgetButton({
       time: document.getElementById('clockNow').textContent,
       // 전자칠판 한 구석에 계속 띄워두고 볼 용도라, 현재 교시 한 줄이 아니라
       // 오늘 시간표 전체를 그대로 넘긴다(본 화면과 같은 buildTodayRows 결과).
-      rows: buildTodayRows(currentSchedule, getDayKey(now), getCurrentPeriodId(now), currentNotes, daily.periodOverrides),
+      rows: buildTodayRows(currentSchedule, getDayKey(now), getCurrentPeriodId(now, periods), currentNotes, daily.periodOverrides, periods),
       nextAlarm: document.getElementById('nextAlarmInfo').textContent,
       // 본 화면의 "연결 끊김" 표시와 같은 값을 그대로 읽어서 플로팅 창에도
       // 띄운다 — PC 화면만 보고 있으면 본 페이지의 경고를 놓치기 쉽다.
@@ -888,6 +945,20 @@ async function loadInitialData() {
   renderNoticeGeneral();
   renderMorningBanner();
   renderTimetableNow();
+
+  try {
+    const { data } = await fetchPeriods();
+    if (data.length) {
+      periods = data;
+    } else {
+      // 서버에 아직 없으면(첫 실행) 기본 교시 시간을 그대로 올려서 다음부터는 항상 있게 한다.
+      trackSave(savePeriods(DEFAULT_PERIODS));
+    }
+  } catch (err) {
+    handleLoadError(err);
+  }
+  renderPeriodsAdminUI();
+  renderTimetableNow(); // 교시 시간이 바뀌었을 수 있으니 시간표(현재 교시 강조 포함)를 다시 그린다.
 
   try {
     const { data } = await fetchBellConfig();
@@ -973,6 +1044,14 @@ function startLiveSync() {
     if (!data) return;
     bellConfig = data;
     renderBellAdminUI();
+    pushBellSchedule();
+  }, handleLoadError));
+
+  liveSyncUnsubscribers.push(subscribePeriods(({ data }) => {
+    if (!data.length) return;
+    periods = data;
+    renderPeriodsAdminUI();
+    renderTimetableNow();
     pushBellSchedule();
   }, handleLoadError));
 

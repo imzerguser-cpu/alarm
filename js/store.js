@@ -113,6 +113,23 @@ export function saveUiSettings(data) {
   return setDoc(roomDoc('settings', 'admin'), data, { merge: true });
 }
 
+// 교시 시작/종료 시각. roster와 같은 모양({ list: [...] })으로 저장한다 —
+// Firestore 문서 루트는 배열을 직접 담을 수 없어서 한 겹 감싸야 한다.
+export async function fetchPeriods() {
+  const snap = await getDoc(roomDoc('schedule', 'periods'));
+  return { data: snap.exists() ? (snap.data().list || []) : [], fromCache: snap.metadata.fromCache };
+}
+
+export function savePeriods(list) {
+  return setDoc(roomDoc('schedule', 'periods'), { list });
+}
+
+export function subscribePeriods(onData, onError) {
+  return onSnapshot(roomDoc('schedule', 'periods'), (snap) => {
+    onData({ data: snap.exists() ? (snap.data().list || []) : [], fromCache: snap.metadata.fromCache });
+  }, onError);
+}
+
 // ---- 실시간 구독 ----
 // 컴퓨터에서 바꾼 내용이 태블릿/전자칠판 화면에도 새로고침 없이 바로
 // 반영돼야 한다는 요청으로 추가했다. 예전에(tablet-display.html) 20초마다

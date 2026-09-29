@@ -85,6 +85,8 @@
       width: 70px; padding: 8px; border-radius: 8px; border: 1px solid #3a4864; background: #0e1420; color: #fff;
     }
     #breakDefaultMinutesInput { width: 80px; }
+    .periods-row-label { min-width: 90px; color: #fff; font-size: 0.9rem; }
+    #periodsList .schedule-row input[type="time"] { width: 120px; }
     .schedule-card label {
       display: block; font-size: 0.85rem; color: #9aa7bd; margin-bottom: 10px;
     }
@@ -196,6 +198,17 @@
                 <button id="saveSubjectRulesBtn">저장</button>
               </div>
               <p id="subjectRulesMessage" class="admin-save-message"></p>
+            </div>
+
+            <div class="schedule-card">
+              <h2>교시 시간 설정</h2>
+              <p class="tt-edit-hint">
+                각 교시(아침활동~쉬는 시간~점심시간 포함)가 실제로 시작·끝나는 시각을 바꿀 수 있습니다.
+                <br>여기서 바꾼 시각은 시간표 표시와 수업종 알림 시각에 모두 그대로 반영됩니다.
+              </p>
+              <div id="periodsList" class="periods-list"></div>
+              <button id="savePeriodsBtn">저장</button>
+              <p id="periodsMessage" class="admin-save-message"></p>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { subtractMinutes, computeTodayBellSchedule, DEFAULT_BELL_CONFIG } from '../js/bell-schedule.js';
-import { PERIODS } from '../js/schedule-times.js';
+import { DEFAULT_PERIODS } from '../js/schedule-times.js';
 
 describe('subtractMinutes', () => {
   it('subtracts minutes within the same hour', () => {
@@ -20,7 +20,7 @@ describe('computeTodayBellSchedule', () => {
   };
 
   it('includes the fixed morning alerts as-is', () => {
-    const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
+    const rows = computeTodayBellSchedule({ periods: DEFAULT_PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
     const morningTimes = DEFAULT_BELL_CONFIG.morningAlerts.map((a) => a.time);
     for (const time of morningTimes) {
       expect(rows.some((r) => r.time === time)).toBe(true);
@@ -28,14 +28,14 @@ describe('computeTodayBellSchedule', () => {
   });
 
   it('never generates an alert before p1 (morning alerts already cover it)', () => {
-    const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
+    const rows = computeTodayBellSchedule({ periods: DEFAULT_PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
     // p1 starts 09:00; nothing besides the fixed morning alerts should land at/after 08:55 and before 09:00.
     const extra = rows.filter((r) => r.time > '08:55' && r.time < '09:00');
     expect(extra).toHaveLength(0);
   });
 
   it('uses a subject rule (4 minutes before, custom message) when the upcoming subject matches', () => {
-    const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
+    const rows = computeTodayBellSchedule({ periods: DEFAULT_PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
     // p2 (과학) starts 09:50 -> alert at 09:46 with the 과학실 message.
     const row = rows.find((r) => r.time === '09:46');
     expect(row).toBeTruthy();
@@ -43,7 +43,7 @@ describe('computeTodayBellSchedule', () => {
   });
 
   it('falls back to the default template (2 minutes before) with the subject substituted', () => {
-    const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
+    const rows = computeTodayBellSchedule({ periods: DEFAULT_PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
     // p6 (피아노, no rule) starts 14:10 -> default alert at 14:08.
     const row = rows.find((r) => r.time === '14:08');
     expect(row).toBeTruthy();
@@ -51,7 +51,7 @@ describe('computeTodayBellSchedule', () => {
   });
 
   it('uses the fixed-break label ("점심시간") in the default template when applicable', () => {
-    const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
+    const rows = computeTodayBellSchedule({ periods: DEFAULT_PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
     // p5 (음악(가야금), has a rule) starts 13:20, preceded by lunch -> rule applies (4분전), not the lunch label.
     const row = rows.find((r) => r.time === '13:16');
     expect(row).toBeTruthy();
@@ -59,7 +59,7 @@ describe('computeTodayBellSchedule', () => {
   });
 
   it('substitutes {다음과목} in a morning alert with today\'s 1교시 subject', () => {
-    const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
+    const rows = computeTodayBellSchedule({ periods: DEFAULT_PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
     const row = rows.find((r) => r.time === '08:55');
     expect(row.message).toBe('국어 수업을 준비하세요.');
   });
@@ -67,27 +67,27 @@ describe('computeTodayBellSchedule', () => {
   it('uses the periodOverrides subject for p1 in the morning alert too', () => {
     const overrides = { p1: { subject: '대바늘 뜨기', note: '' } };
     const rows = computeTodayBellSchedule({
-      periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG, periodOverrides: overrides,
+      periods: DEFAULT_PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG, periodOverrides: overrides,
     });
     const row = rows.find((r) => r.time === '08:55');
     expect(row.message).toBe('대바늘 뜨기 수업을 준비하세요.');
   });
 
   it('leaves a morning alert message untouched when it has no {다음과목} placeholder', () => {
-    const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
+    const rows = computeTodayBellSchedule({ periods: DEFAULT_PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG });
     const row = rows.find((r) => r.time === '08:45');
     expect(row.message).toBe('교실 청소, 자리 정리를 하고 가정통신문을 확인해서 제출하세요.');
   });
 
   it('leaves the {다음과목} placeholder untouched when no 1교시 subject is known at all', () => {
-    const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects: {}, bellConfig: DEFAULT_BELL_CONFIG });
+    const rows = computeTodayBellSchedule({ periods: DEFAULT_PERIODS, daySubjects: {}, bellConfig: DEFAULT_BELL_CONFIG });
     const row = rows.find((r) => r.time === '08:55');
     expect(row.message).toBe('{다음과목} 수업을 준비하세요.');
   });
 
   it('skips periods with no subject for that day', () => {
     const sparse = { p1: '국어' };
-    const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects: sparse, bellConfig: DEFAULT_BELL_CONFIG });
+    const rows = computeTodayBellSchedule({ periods: DEFAULT_PERIODS, daySubjects: sparse, bellConfig: DEFAULT_BELL_CONFIG });
     // Only the 3 fixed morning alerts should be present, nothing computed for p2..p8.
     expect(rows).toHaveLength(DEFAULT_BELL_CONFIG.morningAlerts.length);
   });
@@ -97,7 +97,7 @@ describe('computeTodayBellSchedule', () => {
       // p3 is 과학 on the base timetable, but overridden to a field trip today.
       const overrides = { p3: { subject: '현장학습', note: '' } };
       const rows = computeTodayBellSchedule({
-        periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG, periodOverrides: overrides,
+        periods: DEFAULT_PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG, periodOverrides: overrides,
       });
       // p3 starts 10:50, preceded by 중간놀이시간, no rule for "현장학습" -> default template, 2 minutes before.
       const row = rows.find((r) => r.time === '10:48');
@@ -111,7 +111,7 @@ describe('computeTodayBellSchedule', () => {
       // p6 (피아노, no rule normally) overridden to 체육 today -> should pick up the 체육 rule.
       const overrides = { p6: { subject: '체육', note: '' } };
       const rows = computeTodayBellSchedule({
-        periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG, periodOverrides: overrides,
+        periods: DEFAULT_PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG, periodOverrides: overrides,
       });
       // p6 starts 14:10, 체육 rule is 4분전 -> 14:06.
       const row = rows.find((r) => r.time === '14:06');
@@ -120,7 +120,7 @@ describe('computeTodayBellSchedule', () => {
     });
 
     it('is unaffected when periodOverrides is omitted or empty', () => {
-      const rows = computeTodayBellSchedule({ periods: PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG, periodOverrides: {} });
+      const rows = computeTodayBellSchedule({ periods: DEFAULT_PERIODS, daySubjects, bellConfig: DEFAULT_BELL_CONFIG, periodOverrides: {} });
       const row = rows.find((r) => r.time === '09:46');
       expect(row.message).toBe('화장실에 다녀오고 교과서, 필기도구를 챙겨서 과학실로 이동하세요.');
     });
