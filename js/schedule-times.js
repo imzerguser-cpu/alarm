@@ -3,17 +3,27 @@
 // 쓰는 기본값이자, periods를 안 넘긴 호출부의 기본 동작이다 — id/kind/label
 // 구성 자체(교시 개수, 순서, 무엇이 '아침활동'/'중간놀이'/'점심시간'인지)는
 // 바뀌지 않고, start/end 시각만 커스터마이즈 대상이다.
+//
+// 교시 사이 쉬는 시간(중간놀이시간·점심시간처럼 이름이 있는 것도, 그냥
+// "쉬는 시간"인 것도)도 전부 자기 자신의 start/end를 가진 한 항목이다 —
+// 그래야 관리자 모드에서 교시 시간뿐 아니라 쉬는 시간 길이도 각각 따로
+// 조정할 수 있고(예: 쉬는 시간을 10분→5분으로), 시간표에도 그대로 보인다.
 export const DEFAULT_PERIODS = [
   { id: 'morning', label: '아침활동', start: '08:40', end: '09:00', kind: 'fixed' },
   { id: 'p1', label: '1교시', start: '09:00', end: '09:40', kind: 'class' },
+  { id: 'break1', label: '쉬는 시간', start: '09:40', end: '09:50', kind: 'fixed' },
   { id: 'p2', label: '2교시', start: '09:50', end: '10:30', kind: 'class' },
   { id: 'playtime', label: '중간놀이시간', start: '10:30', end: '10:50', kind: 'fixed' },
   { id: 'p3', label: '3교시', start: '10:50', end: '11:30', kind: 'class' },
+  { id: 'break2', label: '쉬는 시간', start: '11:30', end: '11:40', kind: 'fixed' },
   { id: 'p4', label: '4교시', start: '11:40', end: '12:20', kind: 'class' },
   { id: 'lunch', label: '점심시간', start: '12:20', end: '13:20', kind: 'fixed' },
   { id: 'p5', label: '5교시', start: '13:20', end: '14:00', kind: 'class' },
+  { id: 'break3', label: '쉬는 시간', start: '14:00', end: '14:10', kind: 'fixed' },
   { id: 'p6', label: '6교시', start: '14:10', end: '14:50', kind: 'class' },
+  { id: 'break4', label: '쉬는 시간', start: '14:50', end: '15:00', kind: 'fixed' },
   { id: 'p7', label: '7교시', start: '15:00', end: '15:40', kind: 'class' },
+  { id: 'break5', label: '쉬는 시간', start: '15:40', end: '15:50', kind: 'fixed' },
   { id: 'p8', label: '8교시', start: '15:50', end: '16:30', kind: 'class' },
 ];
 
@@ -43,6 +53,21 @@ export function isMorningActive(date, periods = DEFAULT_PERIODS) {
   const morning = periods[0];
   const nowMin = date.getHours() * 60 + date.getMinutes();
   return nowMin >= toMinutes(morning.start) && nowMin < toMinutes(morning.end);
+}
+
+// 서버에 저장된 periods가 예전 구조(예: 쉬는 시간이 각자 항목으로 분리되기
+// 전)일 수 있다 — 이미 교시 시간 설정을 한 번이라도 저장한 교실은 그 뒤로
+// DEFAULT_PERIODS가 바뀌어도 서버에 저장된 값을 그대로 계속 쓰기 때문이다.
+// id 기준으로 맞춰서, 저장된 항목은 그 start/end를 그대로 쓰고 새로 추가된
+// 항목(예: break1~break5)은 기본값으로 채워 넣는다 — 그래야 새 기능이 기존
+// 교실에도 자연스럽게 나타난다.
+export function mergePeriodsWithDefaults(stored, defaults = DEFAULT_PERIODS) {
+  const byId = new Map((stored || []).map((p) => [p.id, p]));
+  return defaults.map((def) => {
+    const existing = byId.get(def.id);
+    if (!existing) return { ...def };
+    return { ...def, start: existing.start, end: existing.end };
+  });
 }
 
 // 오늘 하루만 특정 교시의 시작/종료 시각을 바꾸고 싶을 때(daily/current 문서의

@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_PERIODS, getDayKey, getCurrentPeriodId, isMorningActive, formatTime12, formatTimeRange12,
-  applyPeriodOverrides,
+  applyPeriodOverrides, mergePeriodsWithDefaults,
 } from '../js/schedule-times.js';
 
 function at(h, m) {
@@ -12,8 +12,8 @@ function at(h, m) {
 }
 
 describe('DEFAULT_PERIODS', () => {
-  it('has 11 defined slots from 아침활동 to 8교시', () => {
-    expect(DEFAULT_PERIODS).toHaveLength(11);
+  it('has 16 defined slots from 아침활동 to 8교시 (교시 사이 쉬는 시간도 각자 항목)', () => {
+    expect(DEFAULT_PERIODS).toHaveLength(16);
     expect(DEFAULT_PERIODS[0].id).toBe('morning');
     expect(DEFAULT_PERIODS.at(-1).id).toBe('p8');
   });
@@ -32,8 +32,8 @@ describe('getCurrentPeriodId', () => {
   it('returns "p1" during 1교시 (09:15)', () => {
     expect(getCurrentPeriodId(at(9, 15))).toBe('p1');
   });
-  it('returns null during a break (09:45)', () => {
-    expect(getCurrentPeriodId(at(9, 45))).toBeNull();
+  it('returns "break1" during the break after 1교시 (09:45)', () => {
+    expect(getCurrentPeriodId(at(9, 45))).toBe('break1');
   });
   it('returns "p6" at 14:15', () => {
     expect(getCurrentPeriodId(at(14, 15))).toBe('p6');
@@ -41,8 +41,8 @@ describe('getCurrentPeriodId', () => {
   it('returns null before school (08:00)', () => {
     expect(getCurrentPeriodId(at(8, 0))).toBeNull();
   });
-  it('excludes the end boundary (09:40 is break, not p1)', () => {
-    expect(getCurrentPeriodId(at(9, 40))).toBeNull();
+  it('excludes the end boundary (09:40 belongs to break1, not p1)', () => {
+    expect(getCurrentPeriodId(at(9, 40))).toBe('break1');
   });
 
   it('uses a custom periods array when one is passed (관리자가 교시 시간을 바꾼 경우)', () => {
@@ -54,8 +54,8 @@ describe('getCurrentPeriodId', () => {
     expect(getCurrentPeriodId(at(9, 5))).toBe('p1');
     // ...but falls BEFORE the customized (later-starting) p1 -> no period yet.
     expect(getCurrentPeriodId(at(9, 5), customPeriods)).toBeNull();
-    // 09:45 is a break under the DEFAULT schedule (p1 already ended at 09:40)...
-    expect(getCurrentPeriodId(at(9, 45))).toBeNull();
+    // 09:45 belongs to break1 under the DEFAULT schedule (p1 already ended at 09:40)...
+    expect(getCurrentPeriodId(at(9, 45))).toBe('break1');
     // ...but still counts as p1 under the customized (later-ending) schedule.
     expect(getCurrentPeriodId(at(9, 45), customPeriods)).toBe('p1');
   });
@@ -79,6 +79,27 @@ describe('applyPeriodOverrides', () => {
   it('ignores an override that only has subject/note (no time change)', () => {
     const result = applyPeriodOverrides(DEFAULT_PERIODS, { p3: { subject: '현장학습', note: '' } });
     expect(result.find((p) => p.id === 'p3')).toEqual(DEFAULT_PERIODS.find((p) => p.id === 'p3'));
+  });
+});
+
+describe('mergePeriodsWithDefaults', () => {
+  it('upgrades an old (pre-break-items) stored array by filling in missing ids from defaults', () => {
+    // "옛날" 구조: 쉬는 시간이 각자 항목으로 없던 시절에 저장된 11개짜리 배열,
+    // 그중 p2는 교실에서 직접 09:55로 바꿔둔 상태.
+    const oldStored = DEFAULT_PERIODS
+      .filter((p) => !p.id.startsWith('break'))
+      .map((p) => (p.id === 'p2' ? { ...p, start: '09:55' } : p));
+    expect(oldStored).toHaveLength(11);
+
+    const merged = mergePeriodsWithDefaults(oldStored);
+    expect(merged).toHaveLength(16); // 새로 추가된 break1~5가 채워진다.
+    expect(merged.find((p) => p.id === 'p2').start).toBe('09:55'); // 기존 커스텀 값은 유지.
+    expect(merged.find((p) => p.id === 'break1')).toEqual(DEFAULT_PERIODS.find((p) => p.id === 'break1'));
+  });
+
+  it('keeps a fully up-to-date stored array unchanged in content', () => {
+    const merged = mergePeriodsWithDefaults(DEFAULT_PERIODS);
+    expect(merged).toEqual(DEFAULT_PERIODS);
   });
 });
 

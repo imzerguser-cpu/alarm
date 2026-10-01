@@ -1,4 +1,6 @@
-import { getDayKey, getCurrentPeriodId, DEFAULT_PERIODS, applyPeriodOverrides } from './schedule-times.js';
+import {
+  getDayKey, getCurrentPeriodId, DEFAULT_PERIODS, applyPeriodOverrides, mergePeriodsWithDefaults,
+} from './schedule-times.js';
 import { buildTodayRows, renderTimetable } from './timetable.js';
 import { INITIAL_SCHEDULE, INITIAL_ROSTER } from './seed-data.js';
 import { initPinLock } from './pin-lock.js';
@@ -743,6 +745,30 @@ document.getElementById('saveAndroidLaunchTimeBtn').addEventListener('click', ()
 
 renderAndroidLaunchTimeUI();
 
+// 전자칠판 전용 네이티브 앱으로 열렸을 때는 교실 코드가 이미 URL에 고정돼
+// 있어서(앱 안에서 바꿔도 다음에 열면 항상 그 교실로 돌아간다) "교실
+// 바꾸기/공유"가 의미 없고, "홈 화면에 추가"(PWA 설치)·"PC 플로팅 위젯"도
+// 이미 설치된 앱 안에서는 쓸 수 없는 기능이라 같이 숨긴다.
+if (window.AndroidLaunchTime) {
+  document.getElementById('changeRoomBtn').hidden = true;
+  document.getElementById('installBtn').hidden = true;
+  document.getElementById('installMessage').hidden = true;
+  document.getElementById('floatingWidgetBtn').hidden = true;
+  document.getElementById('floatingWidgetMessage').hidden = true;
+}
+
+// 과목별 특별 알림/교시 시간 설정처럼 자주 안 쓰는 관리자 카드는 기본으로
+// 접어두고, 제목을 누르면 펼쳐지는 아코디언으로 만든다.
+document.querySelectorAll('[data-card-toggle]').forEach((toggleBtn) => {
+  const body = document.getElementById(toggleBtn.dataset.cardToggle);
+  const chevron = toggleBtn.querySelector('.card-toggle-chevron');
+  toggleBtn.addEventListener('click', () => {
+    const nowOpen = body.hidden;
+    body.hidden = !nowOpen;
+    chevron.textContent = nowOpen ? '▲' : '▼';
+  });
+});
+
 // ---- 관리자 PIN ----
 // 예전에는 기기별 localStorage에 따로 저장해서 "PC에서 바꾼 PIN이 태블릿에는
 // 안 반영된다"는 문제가 있었다. 이제 Firestore(settings/admin)에 저장해
@@ -1022,7 +1048,14 @@ async function loadInitialData() {
   try {
     const { data } = await fetchPeriods();
     if (data.length) {
-      periods = data;
+      const merged = mergePeriodsWithDefaults(data);
+      periods = merged;
+      if (merged.length !== data.length) {
+        // 예전에 저장된 교시 구조(쉬는 시간이 각자 항목으로 분리되기 전)를
+        // 새 구조로 올려서 다시 저장해둔다 — 안 그러면 새로 추가된 쉬는 시간
+        // 항목이 이 교실에서는 "교시 시간 설정" 화면에 영영 안 보인다.
+        trackSave(savePeriods(merged));
+      }
     } else {
       // 서버에 아직 없으면(첫 실행) 기본 교시 시간을 그대로 올려서 다음부터는 항상 있게 한다.
       trackSave(savePeriods(DEFAULT_PERIODS));
@@ -1122,7 +1155,7 @@ function startLiveSync() {
 
   liveSyncUnsubscribers.push(subscribePeriods(({ data }) => {
     if (!data.length) return;
-    periods = data;
+    periods = mergePeriodsWithDefaults(data);
     renderPeriodsAdminUI();
     renderTimetableNow();
     pushBellSchedule();

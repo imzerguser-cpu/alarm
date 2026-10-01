@@ -33,7 +33,14 @@
     #bellStatus.on { color: #2ecc71; }
 
     .schedule-card { background: #1a2233; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
-    .schedule-card h2 { margin: 0 0 14px; font-size: 1.05rem; color: #ffcc00; }
+    .schedule-card h2 { margin: 0; font-size: 1.05rem; color: #ffcc00; }
+    .card-toggle {
+      display: flex; align-items: center; justify-content: space-between; width: 100%;
+      background: none; border: none; padding: 0; margin: 0; cursor: pointer; text-align: left;
+    }
+    .card-toggle-chevron { color: #ffcc00; font-size: 0.9rem; margin-left: 10px; }
+    .card-body { margin-top: 14px; }
+    .card-body[hidden] { display: none; }
     .schedule-row {
       display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #2a344a; flex-wrap: wrap;
     }
@@ -190,25 +197,35 @@
             </div>
 
             <div class="schedule-card">
-              <h2>과목별 특별 알림</h2>
-              <p class="tt-edit-hint">시간표의 과목명과 글자가 정확히 같아야 적용됩니다(예: "음악(가야금)").</p>
-              <div id="subjectRuleList"></div>
-              <div class="schedule-actions">
-                <button id="addSubjectRuleBtn">+ 과목 알림 추가</button>
-                <button id="saveSubjectRulesBtn">저장</button>
+              <button type="button" class="card-toggle" data-card-toggle="subjectRuleCardBody">
+                <h2>과목별 특별 알림</h2>
+                <span class="card-toggle-chevron">▼</span>
+              </button>
+              <div id="subjectRuleCardBody" class="card-body" hidden>
+                <p class="tt-edit-hint">시간표의 과목명과 글자가 정확히 같아야 적용됩니다(예: "음악(가야금)").</p>
+                <div id="subjectRuleList"></div>
+                <div class="schedule-actions">
+                  <button id="addSubjectRuleBtn">+ 과목 알림 추가</button>
+                  <button id="saveSubjectRulesBtn">저장</button>
+                </div>
+                <p id="subjectRulesMessage" class="admin-save-message"></p>
               </div>
-              <p id="subjectRulesMessage" class="admin-save-message"></p>
             </div>
 
             <div class="schedule-card">
-              <h2>교시 시간 설정</h2>
-              <p class="tt-edit-hint">
-                각 교시(아침활동~쉬는 시간~점심시간 포함)가 실제로 시작·끝나는 시각을 바꿀 수 있습니다.
-                <br>여기서 바꾼 시각은 시간표 표시와 수업종 알림 시각에 모두 그대로 반영됩니다.
-              </p>
-              <div id="periodsList" class="periods-list"></div>
-              <button id="savePeriodsBtn">저장</button>
-              <p id="periodsMessage" class="admin-save-message"></p>
+              <button type="button" class="card-toggle" data-card-toggle="periodsCardBody">
+                <h2>교시 시간 설정</h2>
+                <span class="card-toggle-chevron">▼</span>
+              </button>
+              <div id="periodsCardBody" class="card-body" hidden>
+                <p class="tt-edit-hint">
+                  각 교시와 쉬는 시간(아침활동~점심시간 포함)이 실제로 시작·끝나는 시각을 바꿀 수 있습니다.
+                  <br>여기서 바꾼 시각은 시간표 표시와 수업종 알림 시각에 모두 그대로 반영됩니다.
+                </p>
+                <div id="periodsList" class="periods-list"></div>
+                <button id="savePeriodsBtn">저장</button>
+                <p id="periodsMessage" class="admin-save-message"></p>
+              </div>
             </div>
 
             <!-- 전자칠판용 전용 앱(네이티브 안드로이드 앱)으로 열었을 때만 보인다

@@ -14,7 +14,8 @@ describe('buildTodayRows', () => {
     const rows = buildTodayRows(SAMPLE_TUE, 'tue', 'p2');
     const ids = rows.map((r) => r.id);
     expect(ids).toEqual([
-      'morning', 'p1', 'p2', 'playtime', 'p3', 'p4', 'lunch', 'p5', 'p6', 'p7', 'p8',
+      'morning', 'p1', 'break1', 'p2', 'playtime', 'p3', 'break2', 'p4', 'lunch',
+      'p5', 'break3', 'p6', 'break4', 'p7', 'break5', 'p8',
     ]);
     expect(rows.find((r) => r.id === 'p2').isCurrent).toBe(true);
     expect(rows.find((r) => r.id === 'p1').isCurrent).toBe(false);
