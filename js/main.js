@@ -159,11 +159,13 @@ function renderStudentList() {
     const roleValue = student.role || '';
     const todoValue = (daily.todos && daily.todos[String(no)]) || '';
     const submitValue = (daily.submits && daily.submits[String(no)]) || '';
-    // 사용자가 직접 펼치거나 접은 적 없는 학생은 관리자 모드의 기본값(펼침/접힘)을
-    // 그대로 따른다 — 내용이 있다고 자동으로 펼치면 "기본: 접힘"으로 설정한
-    // 의미가 없어진다(빈 칸만 숨기는 건 아래 각 필드의 hidden 처리가 따로 맡는다).
+    const hasContent = !!(roleValue || todoValue || submitValue);
+    // 사용자가 직접 펼치거나 접은 적 없는 학생은 매번 다시 계산한다: 세 칸이
+    // 전부 빈칸이면 관리자 모드의 기본값(펼침/접힘)을 따르고, 하나라도 적혀
+    // 있으면 자동으로 펼친다 — 어떤 칸이 보일지는 아래 각 필드의 hidden
+    // 처리가 맡아서, 실제로는 "적혀 있는 칸만" 보이게 된다.
     if (!studentManualOverride.has(no)) {
-      studentOpenState[no] = uiSettings.studentAccordionDefaultOpen;
+      studentOpenState[no] = hasContent || uiSettings.studentAccordionDefaultOpen;
     }
     const isOpen = studentOpenState[no];
 
