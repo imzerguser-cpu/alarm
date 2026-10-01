@@ -753,6 +753,10 @@ renderAndroidLaunchTimeUI();
 // "홈 화면에 추가"(PWA 설치)·"PC 플로팅 위젯"은 이미 설치된 네이티브 앱
 // 안에서는 쓸 수 없는 기능이라 숨긴다.
 if (window.AndroidLaunchTime) {
+  // PC 화면은 지금 그대로도 한 화면에 잘 들어오므로, 세로 여백을 좁히는
+  // CSS(css/app.css의 body.native-app 규칙)는 전자칠판 전용 앱일 때만
+  // 적용되게 이 클래스로 표시해둔다.
+  document.body.classList.add('native-app');
   document.getElementById('installBtn').hidden = true;
   document.getElementById('installMessage').hidden = true;
   document.getElementById('floatingWidgetBtn').hidden = true;

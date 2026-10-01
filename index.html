@@ -32,6 +32,16 @@
     #bellStatus { font-size: 0.95rem; color: #9aa7bd; width: 100%; text-align: center; margin-top: 4px; }
     #bellStatus.on { color: #2ecc71; }
 
+    /* 전자칠판 전용 네이티브 앱(js/main.js가 body에 붙이는 native-app
+       클래스)에서만 세로 여백을 좁혀서, 스크롤 없이 하단 툴바까지 한 화면에
+       들어오게 한다. PC 브라우저는 지금 그대로도 충분히 한 화면에 들어오므로
+       이 규칙의 영향을 받지 않는다. 글씨 크기는 그대로 두고 여백만 줄인다. */
+    body.native-app .bell-wrap { padding: 16px; }
+    body.native-app .bell-wrap h1 { margin: 0 0 10px; }
+    body.native-app .clock-card { padding: 8px; margin-bottom: 10px; }
+    body.native-app #nextAlarmInfo { margin-top: 6px; }
+    body.native-app .control-bar { margin-bottom: 14px; }
+
     .schedule-card { background: #1a2233; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
     .schedule-card h2 { margin: 0; font-size: 1.05rem; color: #ffcc00; }
     .card-toggle {
