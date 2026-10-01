@@ -34,7 +34,10 @@
      정확히 30/40/30 비율이 되면서도 넘치지 않는다. */
   grid-template-columns: 3fr 4fr 3fr;
   gap: 16px;
-  align-items: start;
+  /* 세 칸 중 가장 긴 칸(보통 교시 수가 많은 날의 시간표)에 맞춰 나머지 두 칸도
+     카드 배경이 그대로 늘어나게 한다(= 기본값인 stretch). align-items: start로
+     두면 짧은 칸은 내용만큼만 박스가 끝나고, 그 아래 툴바가 나오기 전까지는
+     카드도 아닌 맨 배경色 빈 공간이 그대로 남아 붕 떠 보인다. */
 }
 @media (max-width: 900px) {
   .three-col-row { grid-template-columns: 1fr; }
@@ -71,11 +74,19 @@
 
 .notice-section {
   background: #1a2233; border-radius: 14px; padding: 20px;
+  /* 가운데 칸(.center-section)이 오른쪽 시간표 칸만큼 늘어났을 때, 그 남는
+     높이를 위의 알리미 조작 카드(.bell-wrap)가 아니라 이 알림장 카드가
+     흡수한다 — 그래야 빈 공간이 카드 "밖"이 아니라 이 카드 "안"의 여백으로
+     자연스럽게 보인다. */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 .notice-general {
   min-height: 2.4em; padding: 10px; border-radius: 8px; background: #0e1420;
   color: #fff; margin-bottom: 14px; white-space: pre-wrap;
   outline: 1px dashed #ffcc00; /* 편집모드와 무관하게 항상 입력 가능이라 항상 표시 */
+  flex: 1; /* 알림장 카드가 늘어난 만큼 글 쓰는 칸 자체가 커진다(의미 없는 빈 칸이 아니라). */
 }
 .hiclass-btn {
   padding: 10px 16px; border-radius: 8px; border: none;
