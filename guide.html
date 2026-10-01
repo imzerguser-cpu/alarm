@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사용 설명서 — 교실 수업 알리미</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Malgun Gothic', sans-serif; background: #0e1420; color: #fff;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { color: #ffcc00; font-size: 1.8rem; text-align: center; margin-bottom: 6px; }
+  .subtitle { text-align: center; color: #9aa7bd; margin-bottom: 36px; }
+  .back-link {
+    display: inline-block; margin-bottom: 20px; color: #8fb8ff; text-decoration: none; font-size: 0.9rem;
+  }
+  .back-link:hover { text-decoration: underline; }
+  .toc {
+    background: #1a2233; border-radius: 14px; padding: 18px 24px; margin-bottom: 32px;
+  }
+  .toc h2 { font-size: 1rem; color: #ffcc00; margin: 0 0 10px; }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc a { color: #fff; text-decoration: none; }
+  .toc a:hover { color: #ffcc00; text-decoration: underline; }
+
+  section { margin-bottom: 48px; }
+  section h2 {
+    color: #ffcc00; font-size: 1.3rem; border-bottom: 2px solid #2a344a; padding-bottom: 10px;
+    margin-bottom: 18px; display: flex; align-items: center; gap: 10px;
+  }
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%; background: #ffcc00; color: #111;
+    font-weight: bold; font-size: 1rem; flex-shrink: 0;
+  }
+  h3 { color: #fff; font-size: 1.05rem; margin: 22px 0 8px; }
+  p { color: #c9d2e0; margin: 8px 0; }
+  .hint {
+    background: #15202e; border-left: 3px solid #ffcc00; padding: 10px 14px; border-radius: 6px;
+    color: #c9d2e0; font-size: 0.9rem; margin: 14px 0;
+  }
+  .warn {
+    background: #2a1a1a; border-left: 3px solid #e74c3c; padding: 10px 14px; border-radius: 6px;
+    color: #f0c9c9; font-size: 0.9rem; margin: 14px 0;
+  }
+  ol, ul { color: #c9d2e0; padding-left: 22px; }
+  li { margin: 6px 0; }
+  figure { margin: 18px 0; }
+  figure img {
+    width: 100%; border-radius: 10px; border: 1px solid #2a344a; display: block;
+  }
+  figcaption {
+    text-align: center; color: #9aa7bd; font-size: 0.85rem; margin-top: 8px;
+  }
+  .btn-link {
+    display: inline-block; margin: 12px 0; padding: 12px 20px; border-radius: 10px;
+    background: #ffcc00; color: #111; font-weight: bold; text-decoration: none;
+  }
+  .btn-link:hover { background: #ffd93d; }
+  code, .code {
+    background: #0e1420; border: 1px solid #2a344a; border-radius: 6px; padding: 2px 8px;
+    font-family: Consolas, monospace; color: #ffcc00; font-size: 0.9rem;
+  }
+  .two-col { display: flex; gap: 16px; flex-wrap: wrap; }
+  .two-col > div { flex: 1; min-width: 260px; }
+  .card {
+    background: #1a2233; border-radius: 14px; padding: 20px;
+  }
+  footer { text-align: center; color: #55617a; font-size: 0.85rem; margin-top: 50px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="index.html">← 알리미 화면으로 돌아가기</a>
+  <h1>🔔 교실 수업 알리미 사용 설명서</h1>
+  <p class="subtitle">컴퓨터(웹)에서 쓰는 방법과 전자칠판에 설치해서 쓰는 방법을 순서대로 안내합니다.</p>
+
+  <div class="toc">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#step1">교실 만들기 (처음 한 번만)</a></li>
+      <li><a href="#step2">컴퓨터(PC)에서 계속 사용하기</a></li>
+      <li><a href="#step3">다른 기기(태블릿 등)에서 같은 교실 열기</a></li>
+      <li><a href="#step4">전자칠판에 전용 앱 설치하기</a></li>
+      <li><a href="#step5">관리자 모드 사용법 (PIN·로그아웃)</a></li>
+      <li><a href="#faq">자주 묻는 질문</a></li>
+    </ol>
+  </div>
+
+  <section id="step1">
+    <h2><span class="step-num">1</span> 교실 만들기 (처음 한 번만)</h2>
+    <p>
+      이 프로그램은 회원가입이나 아이디·비밀번호가 따로 없습니다. 대신 <b>"교실 코드"</b> 하나로
+      우리 반 데이터(시간표, 학생 명단, 알림 설정)를 다른 선생님 반과 완전히 분리해서 보관합니다.
+      이 교실 코드가 사실상 여러분의 "아이디"인 셈입니다.
+    </p>
+    <ol>
+      <li>주소창에 알리미 주소를 입력해서 처음 들어가면, 아래처럼 "교실 선택" 화면이 뜹니다.</li>
+      <li><b>교실 이름 정하기</b> 칸에 우리 반을 알아볼 수 있는 이름(예: "3학년2반")을 입력하고,
+        <span class="code">이 이름으로 교실 만들기</span> 버튼을 누릅니다.</li>
+    </ol>
+    <div class="hint">
+      교실 이름을 비워두고 바로 버튼을 누르면 영문/숫자로 된 짧은 코드가 자동으로 만들어집니다.
+      다른 기기에 코드를 직접 타이핑해서 입력할 일이 많다면, 한글보다 이 자동 코드가 더 간단하고
+      실수도 적습니다.
+    </div>
+    <figure>
+      <img src="images/guide/01-room-select.png" alt="처음 접속했을 때 뜨는 교실 선택 화면">
+      <figcaption>처음 접속하면 뜨는 "교실 선택" 화면 — 이름을 정해서 새로 만들거나, 이미 있는 교실 코드를 입력해서 들어갈 수 있습니다.</figcaption>
+    </figure>
+    <ol start="3">
+      <li>이름을 입력하고 만들기를 누르면, 아래처럼 교실 코드와 공유 주소가 나타납니다.
+        <span class="code">확인, 계속하기</span>를 누르면 바로 그 교실로 들어갑니다.</li>
+    </ol>
+    <figure>
+      <img src="images/guide/02-room-created-share.png" alt="교실을 만든 직후 나오는 코드와 공유 주소 화면">
+      <figcaption>교실을 만들면 코드와 "다른 기기에서 그대로 열리는 주소"가 바로 나타납니다.</figcaption>
+    </figure>
+    <div class="warn">
+      이 교실 코드는 꼭 메모해두거나 스크린샷을 찍어두세요. 나중에 태블릿·전자칠판·다른 컴퓨터에서
+      같은 반 데이터로 들어가려면 이 코드(또는 공유 주소)가 반드시 필요합니다.
+    </div>
+  </section>
+
+  <section id="step2">
+    <h2><span class="step-num">2</span> 컴퓨터(PC)에서 계속 사용하기</h2>
+    <p>한 번 교실을 만들고 들어가면, 그 컴퓨터는 알아서 같은 교실을 기억합니다.</p>
+    <ol>
+      <li>이 페이지(알리미 주소)를 <b>브라우저 즐겨찾기(북마크)</b>에 추가해두세요.</li>
+      <li>다음부터는 그 즐겨찾기만 누르면 교실 코드를 다시 입력할 필요 없이 바로 우리 반 화면으로 들어갑니다.</li>
+    </ol>
+    <div class="hint">
+      같은 컴퓨터를 다른 반 선생님과 같이 쓴다면, 화면 아래 <span class="code">🏫 교실 바꾸기/공유</span>
+      버튼으로 언제든 다른 교실 코드로 바꿔 들어갈 수 있습니다. (5단계 아래 화면 참고)
+    </div>
+    <figure>
+      <img src="images/guide/03-main-screen.png" alt="교실에 들어온 뒤의 메인 화면">
+      <figcaption>교실에 들어오면 이 메인 화면이 뜹니다 — 왼쪽은 학생 명단, 가운데는 수업종 알리미, 오른쪽은 오늘 시간표입니다.</figcaption>
+    </figure>
+  </section>
+
+  <section id="step3">
+    <h2><span class="step-num">3</span> 다른 기기(태블릿 등)에서 같은 교실 열기</h2>
+    <p>태블릿이나 다른 컴퓨터에서도 "같은 반 데이터"를 보려면 같은 교실 코드로 들어가면 됩니다.</p>
+    <ol>
+      <li>이미 들어와 있는 화면에서 아래쪽 <span class="code">🏫 교실 바꾸기/공유</span> 버튼을 누릅니다.</li>
+      <li>아래처럼 지금 교실 코드와 공유 주소가 뜹니다. <span class="code">복사</span> 버튼으로 주소를
+        복사해서 카카오톡/메신저 등으로 그 기기에 전달하면, 그 주소를 누르는 것만으로 코드 입력 없이
+        바로 같은 교실로 들어갑니다.</li>
+    </ol>
+    <figure>
+      <img src="images/guide/04-room-share-existing.png" alt="교실 바꾸기/공유 버튼을 눌렀을 때 뜨는 현재 교실 정보 화면">
+      <figcaption>"교실 바꾸기/공유"를 누르면 지금 교실의 코드와 공유 주소를 바로 복사할 수 있습니다.</figcaption>
+    </figure>
+    <div class="hint">
+      전자칠판처럼 매일 자동으로 켜지는 기기는 그냥 브라우저 탭이 아니라, 아래 4단계의 "전용 설치 앱"을
+      쓰는 걸 권장합니다. 음성 알림이 더 안정적으로 나오고, 정해진 시각에 자동으로 켜지는 기능이 있습니다.
+    </div>
+  </section>
+
+  <section id="step4">
+    <h2><span class="step-num">4</span> 전자칠판에 전용 앱 설치하기</h2>
+    <p>
+      전자칠판(안드로이드)에는 일반 브라우저 대신, 이 알리미 전용으로 만든 설치 파일(APK)을 쓰는 걸
+      권장합니다. 음성 안내가 더 안정적으로 나오고, 정해둔 시각에 화면이 자동으로 뜹니다.
+    </p>
+    <div style="text-align:center;">
+      <a class="btn-link" href="https://github.com/imzerguser-cpu/alarm/releases/download/v1.0.0/classroom-alarm.apk" download>
+        ⬇ 전자칠판용 설치 파일(APK) 내려받기
+      </a>
+    </div>
+    <h3>설치 순서</h3>
+    <ol>
+      <li>전자칠판에서 위 버튼(또는 이 주소)을 눌러 <span class="code">classroom-alarm.apk</span> 파일을 내려받습니다.</li>
+      <li>내려받은 파일을 누르면 "출처를 알 수 없는 앱" 설치를 허용해달라는 안내가 뜰 수 있습니다 —
+        허용(설정으로 이동 → 허용)하고 다시 설치를 진행합니다.</li>
+      <li>설치가 끝나면 <b>교실 알리미</b> 아이콘이 생깁니다. 그 아이콘을 눌러 앱을 엽니다.</li>
+      <li>처음 열면 1단계와 똑같은 "교실 선택" 화면이 뜹니다. 이미 PC에서 교실을 만들어뒀다면
+        <span class="code">교실 코드 입력</span>에 그 코드를 넣고 <span class="code">입장하기</span>를
+        누르면 됩니다. 새 교실이 필요하면 여기서 바로 만들어도 됩니다.</li>
+      <li>한 번 들어가면 그 뒤로는 자동으로 같은 교실을 기억합니다 — 다시 설정할 필요가 없습니다.</li>
+    </ol>
+    <div class="warn">
+      설치 직후에는 꼭 아이콘을 한 번 직접 눌러 앱을 열어주세요. 안드로이드가 "한 번도 실행 안 된 앱"에는
+      부팅/예약 알림을 안 보내는 경우가 있어서, 최소 한 번은 수동으로 열어야 다음부터 자동 실행이 걸립니다.
+    </div>
+    <h3>자동 실행 시각 설정</h3>
+    <p>
+      전자칠판의 "예약 전원 켜짐" 시각에 맞춰, 이 앱도 매일 정해진 시각(기본 오전 8:45)에 자동으로
+      화면이 뜨도록 설정돼 있습니다. 이 시각은 설치 앱으로 열었을 때만 관리자 모드 화면 안에
+      <b>"프로그램 자동 실행 시간"</b> 카드로 나타나며, 거기서 바로 바꿀 수 있습니다(5단계 참고).
+    </p>
+  </section>
+
+  <section id="step5">
+    <h2><span class="step-num">5</span> 관리자 모드 사용법 (PIN·로그아웃)</h2>
+    <p>
+      시간표/학생 명단/알림 설정처럼 교사만 바꿔야 하는 항목은 "관리자 모드"에서만 수정할 수 있습니다.
+      화면 아래 <span class="code">🔐 관리자 모드</span> 버튼을 누르면 PIN을 물어봅니다.
+    </p>
+    <figure>
+      <img src="images/guide/05-pin-modal.png" alt="관리자 PIN 입력 창">
+      <figcaption>기본 PIN은 <b>1234</b>입니다 — 처음 들어가면 꼭 바꿔두세요(아래 참고).</figcaption>
+    </figure>
+    <p>PIN을 맞게 입력하면 관리자 모드로 들어가고, 시간표 편집·학생 추가 등 평소엔 안 보이던 입력칸이 나타납니다.</p>
+    <figure>
+      <img src="images/guide/06-admin-mode.png" alt="관리자 모드로 들어갔을 때의 화면 상단">
+      <figcaption>관리자 모드에서는 알림장 수정, 학생 추가, 수업종 알림 설정 등을 할 수 있습니다.</figcaption>
+    </figure>
+    <h3>로그아웃 / PIN 바꾸기 / 그 밖의 관리자 버튼</h3>
+    <figure>
+      <img src="images/guide/07-admin-toolbar.png" alt="관리자 모드일 때 화면 아래쪽 버튼들">
+      <figcaption>관리자 모드에서는 버튼 글자가 <b>"🔓 관리자 모드 로그아웃"</b>으로 바뀝니다 — 다시 누르면 PIN 없이 바로 잠깁니다. PIN 변경, 학생 명단 가져오기 등도 이 줄에서 할 수 있습니다.</figcaption>
+    </figure>
+    <ul>
+      <li><b>로그아웃:</b> 관리자 모드 상태에서는 버튼 글자가 "로그아웃"으로 바뀝니다. 그 버튼을 한 번 더 누르면 됩니다.</li>
+      <li><b>PIN 변경:</b> 관리자 모드에서만 보이는 <span class="code">새 PIN(4자리)</span> 칸에 원하는 숫자 4자리를 입력하고 <span class="code">PIN 변경</span>을 누릅니다.</li>
+    </ul>
+    <div class="warn">
+      PIN을 바꾸면 그 교실 코드를 쓰는 모든 기기(PC·태블릿·전자칠판)에 똑같이 적용됩니다. 다른 반과
+      섞이지 않도록, PIN은 그 교실을 실제로 관리하는 선생님만 알고 있는 숫자로 바꿔두는 걸 권장합니다.
+    </div>
+  </section>
+
+  <section id="faq">
+    <h2><span class="step-num">?</span> 자주 묻는 질문</h2>
+    <div class="two-col">
+      <div class="card">
+        <h3>교실 코드를 잊어버렸어요</h3>
+        <p>이미 들어가 있는 다른 기기(PC 등)에서 <span class="code">🏫 교실 바꾸기/공유</span> 버튼을 누르면 지금 코드를 다시 확인할 수 있습니다.</p>
+      </div>
+      <div class="card">
+        <h3>다른 선생님과 교실 코드가 겹칠까요?</h3>
+        <p>직접 이름을 짓다가 이미 쓰이는 이름이면 "이미 사용 중인 이름이에요"라고 안내가 뜹니다. 자동 생성 코드는 겹칠 걱정이 거의 없습니다.</p>
+      </div>
+      <div class="card">
+        <h3>전자칠판 앱 없이 그냥 브라우저로 써도 되나요?</h3>
+        <p>네, 가능합니다. 다만 음성 안내가 불안정하거나 매일 자동으로 켜는 기능이 없어서, 하루 종일 켜두는 전자칠판에는 전용 앱(4단계)을 권장합니다.</p>
+      </div>
+      <div class="card">
+        <h3>여러 반 전자칠판이 있어요. 앱을 여러 개 설치해야 하나요?</h3>
+        <p>아니요, 같은 설치 파일 하나로 충분합니다. 전자칠판마다 설치 후 처음 열 때 "그 반"의 교실 코드만 다르게 입력하면 됩니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>교실 수업 알리미 · 문의 사항은 만든 선생님께 직접 연락해주세요.</footer>
+</div>
+</body>
+</html>
