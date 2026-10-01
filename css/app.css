@@ -1,10 +1,10 @@
 .app-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 12px 20px 0;
+  padding: 16px 20px 0;
 }
 
 .top-clock { text-align: center; }
@@ -40,7 +40,7 @@
   .three-col-row { grid-template-columns: 1fr; }
 }
 
-.center-section { display: flex; flex-direction: column; gap: 10px; }
+.center-section { display: flex; flex-direction: column; gap: 16px; }
 
 .student-section {
   background: #1a2233; border-radius: 14px; padding: 20px;
@@ -70,11 +70,11 @@
 }
 
 .notice-section {
-  background: #1a2233; border-radius: 14px; padding: 16px;
+  background: #1a2233; border-radius: 14px; padding: 20px;
 }
 .notice-general {
   min-height: 2.4em; padding: 10px; border-radius: 8px; background: #0e1420;
-  color: #fff; margin-bottom: 10px; white-space: pre-wrap;
+  color: #fff; margin-bottom: 14px; white-space: pre-wrap;
   outline: 1px dashed #ffcc00; /* 편집모드와 무관하게 항상 입력 가능이라 항상 표시 */
 }
 .hiclass-btn {
@@ -141,7 +141,7 @@
 .timetable-row.current .tt-note { color: #333; opacity: 0.85; }
 
 .toolbar {
-  max-width: 1200px; margin: 10px auto 0; padding: 0 20px 16px;
+  max-width: 1200px; margin: 16px auto 0; padding: 0 20px 20px;
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
 }
 .toolbar button {
