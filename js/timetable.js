@@ -12,6 +12,11 @@ export function buildTodayRows(
   const overrides = periodOverrides || {};
   const rows = [];
   for (const period of periods) {
+    // hiddenInTimetable이 붙은 항목(이름 없는 "쉬는 시간")은 시간표에는 한 줄씩
+    // 안 보여준다 — 교시 수만큼만 보여도 충분하고, 전부 보이면 시간표가 너무
+    // 길어진다. 알림 시각 계산(js/bell-schedule.js)은 이 배열을 그대로 쓰므로
+    // 영향이 없다 — 여기(화면 표시)에서만 건너뛴다.
+    if (period.hiddenInTimetable) continue;
     const override = overrides[period.id];
     let subject;
     let note;

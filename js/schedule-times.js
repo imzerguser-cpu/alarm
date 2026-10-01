@@ -6,24 +6,28 @@
 //
 // 교시 사이 쉬는 시간(중간놀이시간·점심시간처럼 이름이 있는 것도, 그냥
 // "쉬는 시간"인 것도)도 전부 자기 자신의 start/end를 가진 한 항목이다 —
-// 그래야 관리자 모드에서 교시 시간뿐 아니라 쉬는 시간 길이도 각각 따로
-// 조정할 수 있고(예: 쉬는 시간을 10분→5분으로), 시간표에도 그대로 보인다.
+// 그래야 관리자 모드("교시 시간 설정")에서 교시 시간뿐 아니라 쉬는 시간
+// 길이도 각각 따로 조정할 수 있다(예: 쉬는 시간을 10분→5분으로). 다만 이름
+// 없는 "쉬는 시간"까지 전부 시간표에 한 줄씩 보이면 너무 길어지므로,
+// hiddenInTimetable: true가 붙은 항목은 js/timetable.js가 화면에는 안
+// 보여준다(관리자 모드 설정 화면에는 그대로 보인다 — js/main.js의
+// renderPeriodsRows는 이 배열을 그대로 쓴다).
 export const DEFAULT_PERIODS = [
   { id: 'morning', label: '아침활동', start: '08:40', end: '09:00', kind: 'fixed' },
   { id: 'p1', label: '1교시', start: '09:00', end: '09:40', kind: 'class' },
-  { id: 'break1', label: '쉬는 시간', start: '09:40', end: '09:50', kind: 'fixed' },
+  { id: 'break1', label: '쉬는 시간', start: '09:40', end: '09:50', kind: 'fixed', hiddenInTimetable: true },
   { id: 'p2', label: '2교시', start: '09:50', end: '10:30', kind: 'class' },
   { id: 'playtime', label: '중간놀이시간', start: '10:30', end: '10:50', kind: 'fixed' },
   { id: 'p3', label: '3교시', start: '10:50', end: '11:30', kind: 'class' },
-  { id: 'break2', label: '쉬는 시간', start: '11:30', end: '11:40', kind: 'fixed' },
+  { id: 'break2', label: '쉬는 시간', start: '11:30', end: '11:40', kind: 'fixed', hiddenInTimetable: true },
   { id: 'p4', label: '4교시', start: '11:40', end: '12:20', kind: 'class' },
   { id: 'lunch', label: '점심시간', start: '12:20', end: '13:20', kind: 'fixed' },
   { id: 'p5', label: '5교시', start: '13:20', end: '14:00', kind: 'class' },
-  { id: 'break3', label: '쉬는 시간', start: '14:00', end: '14:10', kind: 'fixed' },
+  { id: 'break3', label: '쉬는 시간', start: '14:00', end: '14:10', kind: 'fixed', hiddenInTimetable: true },
   { id: 'p6', label: '6교시', start: '14:10', end: '14:50', kind: 'class' },
-  { id: 'break4', label: '쉬는 시간', start: '14:50', end: '15:00', kind: 'fixed' },
+  { id: 'break4', label: '쉬는 시간', start: '14:50', end: '15:00', kind: 'fixed', hiddenInTimetable: true },
   { id: 'p7', label: '7교시', start: '15:00', end: '15:40', kind: 'class' },
-  { id: 'break5', label: '쉬는 시간', start: '15:40', end: '15:50', kind: 'fixed' },
+  { id: 'break5', label: '쉬는 시간', start: '15:40', end: '15:50', kind: 'fixed', hiddenInTimetable: true },
   { id: 'p8', label: '8교시', start: '15:50', end: '16:30', kind: 'class' },
 ];
 
