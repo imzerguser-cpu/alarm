@@ -745,12 +745,12 @@ document.getElementById('saveAndroidLaunchTimeBtn').addEventListener('click', ()
 
 renderAndroidLaunchTimeUI();
 
-// 전자칠판 전용 네이티브 앱으로 열렸을 때는 교실 코드가 이미 URL에 고정돼
-// 있어서(앱 안에서 바꿔도 다음에 열면 항상 그 교실로 돌아간다) "교실
-// 바꾸기/공유"가 의미 없고, "홈 화면에 추가"(PWA 설치)·"PC 플로팅 위젯"도
-// 이미 설치된 앱 안에서는 쓸 수 없는 기능이라 같이 숨긴다.
+// 전자칠판 전용 네이티브 앱으로 열렸을 때도 "교실 바꾸기/공유"는 그대로
+// 쓸 수 있어야 한다(처음 설치한 기기에서 교실 코드를 고르는 것도 이 화면을
+// 통해서다 — js/room.js가 URL에 ?room=이 없으면 자동으로 띄워준다). 다만
+// "홈 화면에 추가"(PWA 설치)·"PC 플로팅 위젯"은 이미 설치된 네이티브 앱
+// 안에서는 쓸 수 없는 기능이라 숨긴다.
 if (window.AndroidLaunchTime) {
-  document.getElementById('changeRoomBtn').hidden = true;
   document.getElementById('installBtn').hidden = true;
   document.getElementById('installMessage').hidden = true;
   document.getElementById('floatingWidgetBtn').hidden = true;
