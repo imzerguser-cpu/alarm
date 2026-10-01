@@ -157,12 +157,11 @@ function renderStudentList() {
     const roleValue = student.role || '';
     const todoValue = (daily.todos && daily.todos[String(no)]) || '';
     const submitValue = (daily.submits && daily.submits[String(no)]) || '';
-    const hasContent = !!(roleValue || todoValue || submitValue);
-
-    // 사용자가 직접 펼치거나 접은 적 없는 학생은 매번 다시 계산한다: 내용이
-    // 하나라도 있으면 펼침, 완전히 비어 있으면 관리자 모드의 기본값을 따른다.
+    // 사용자가 직접 펼치거나 접은 적 없는 학생은 관리자 모드의 기본값(펼침/접힘)을
+    // 그대로 따른다 — 내용이 있다고 자동으로 펼치면 "기본: 접힘"으로 설정한
+    // 의미가 없어진다(빈 칸만 숨기는 건 아래 각 필드의 hidden 처리가 따로 맡는다).
     if (!studentManualOverride.has(no)) {
-      studentOpenState[no] = hasContent || uiSettings.studentAccordionDefaultOpen;
+      studentOpenState[no] = uiSettings.studentAccordionDefaultOpen;
     }
     const isOpen = studentOpenState[no];
 
@@ -712,6 +711,38 @@ document.getElementById('savePeriodsBtn').addEventListener('click', () => {
   msg.className = 'admin-save-message';
 });
 
+// ---- 전자칠판 전용 앱: 프로그램 자동 실행 시간 ----
+// window.AndroidLaunchTime은 네이티브 안드로이드 앱(WebView)이
+// addJavascriptInterface로 심어준 다리다. 일반 브라우저(PC/태블릿)에는 이
+// 객체 자체가 없으므로, 있을 때만 카드를 보여주고 값을 읽어온다. 이 값은
+// Firestore가 아니라 "이 기기 자체"에만 있는 설정(안드로이드
+// AlarmManager)이라, 여기서 읽고 쓰는 건 전부 이 다리를 통해서만 한다.
+function renderAndroidLaunchTimeUI() {
+  const bridge = window.AndroidLaunchTime;
+  const card = document.getElementById('androidLaunchTimeCard');
+  if (!bridge) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  const hour = String(bridge.getHour()).padStart(2, '0');
+  const minute = String(bridge.getMinute()).padStart(2, '0');
+  document.getElementById('androidLaunchTimeInput').value = `${hour}:${minute}`;
+}
+
+document.getElementById('saveAndroidLaunchTimeBtn').addEventListener('click', () => {
+  const bridge = window.AndroidLaunchTime;
+  const value = document.getElementById('androidLaunchTimeInput').value;
+  if (!bridge || !value) return;
+  const [hour, minute] = value.split(':').map(Number);
+  bridge.setTime(hour, minute);
+  const msg = document.getElementById('androidLaunchTimeMessage');
+  msg.textContent = '저장되었습니다.';
+  msg.className = 'admin-save-message';
+});
+
+renderAndroidLaunchTimeUI();
+
 // ---- 관리자 PIN ----
 // 예전에는 기기별 localStorage에 따로 저장해서 "PC에서 바꾼 PIN이 태블릿에는
 // 안 반영된다"는 문제가 있었다. 이제 Firestore(settings/admin)에 저장해
@@ -734,6 +765,10 @@ initPinLock({
   onUnlock: () => {
     window.__EDIT_MODE__ = true;
     document.body.classList.add('edit-mode');
+    // 버튼 글자를 바꿔서 "다시 누르면 로그아웃된다"는 걸 눈에 보이게 한다 —
+    // 안 바뀌면 들어갈 때 누른 버튼과 나갈 때 눌러야 할 버튼이 똑같아 보여서
+    // 로그아웃 방법을 못 찾는 경우가 있었다.
+    document.getElementById('editModeBtn').textContent = '🔓 관리자 모드 로그아웃';
     renderStudentList();
     renderNoticeGeneral();
     renderMorningBanner();
@@ -741,6 +776,7 @@ initPinLock({
   onLock: () => {
     window.__EDIT_MODE__ = false;
     document.body.classList.remove('edit-mode');
+    document.getElementById('editModeBtn').textContent = '🔐 관리자 모드';
     renderStudentList();
     renderNoticeGeneral();
     renderMorningBanner();

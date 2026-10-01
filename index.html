@@ -210,6 +210,24 @@
               <button id="savePeriodsBtn">저장</button>
               <p id="periodsMessage" class="admin-save-message"></p>
             </div>
+
+            <!-- 전자칠판용 전용 앱(네이티브 안드로이드 앱)으로 열었을 때만 보인다
+                 (main.js가 window.AndroidLaunchTime 존재 여부로 판단). 이 값은
+                 이 기기에만 있는 설정(안드로이드 AlarmManager로 거는 부팅 알람)이라
+                 Firestore가 아니라 기기 자체에 저장되고, 그래서 PC/태블릿 등 다른
+                 기기나 일반 브라우저에는 의미가 없어서 평소엔 숨겨둔다. -->
+            <div id="androidLaunchTimeCard" class="schedule-card" hidden>
+              <h2>프로그램 자동 실행 시간 (이 전자칠판 전용)</h2>
+              <p class="tt-edit-hint">
+                이 전자칠판이 매일 아침 전원이 켜진 뒤, 이 시각에 알리미 화면이
+                자동으로 뜹니다. 다른 기기(태블릿/PC)에는 영향을 주지 않습니다.
+              </p>
+              <label>자동 실행 시각
+                <input id="androidLaunchTimeInput" type="time">
+              </label>
+              <button id="saveAndroidLaunchTimeBtn">저장</button>
+              <p id="androidLaunchTimeMessage" class="admin-save-message"></p>
+            </div>
           </div>
         </div>
 
