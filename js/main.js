@@ -770,6 +770,15 @@ if (window.AndroidLaunchTime) {
   document.getElementById('installMessage').hidden = true;
   document.getElementById('floatingWidgetBtn').hidden = true;
   document.getElementById('floatingWidgetMessage').hidden = true;
+
+  // 전자칠판에는 버튼을 눌러줄 사람이 없으므로, 알리미가 꺼진 상태로 화면이
+  // 열렸으면(한 번도 "시작"을 안 눌러봤거나, 전에 꺼둔 채로 재설치한 경우)
+  // 자동으로 켜준다. 이미 켜져 있으면(localStorage에 저장된 상태) 아무것도
+  // 안 한다 — 중복 호출 방지는 startBell 쪽에서도 하지만, 여기서도 한 번
+  // 더 확인해 불필요한 "시작합니다" 음성이 매번 반복되지 않게 한다.
+  if (window.classBell && !window.classBell.isRunning()) {
+    window.classBell.start();
+  }
 }
 
 // 과목별 특별 알림/교시 시간 설정처럼 자주 안 쓰는 관리자 카드는 기본으로
