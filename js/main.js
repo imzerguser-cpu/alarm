@@ -743,6 +743,19 @@ document.getElementById('saveAndroidLaunchTimeBtn').addEventListener('click', ()
 
 renderAndroidLaunchTimeUI();
 
+// "오늘 아침 자동 실행이 왜 안 됐지?" 같은 문제를 전자칠판 옆에서 바로
+// 확인할 수 있게, 설치 앱에만 있는 부팅/알람 기록을 보여준다. 일반
+// 브라우저에는 이 함수 자체가 없으므로 버튼이 계속 숨겨져 있다.
+if (window.AndroidLaunchTime && typeof window.AndroidLaunchTime.getDiagnosticsLog === 'function') {
+  const showLogBtn = document.getElementById('showDiagnosticsLogBtn');
+  const logText = document.getElementById('diagnosticsLogText');
+  showLogBtn.hidden = false;
+  showLogBtn.addEventListener('click', () => {
+    logText.value = window.AndroidLaunchTime.getDiagnosticsLog();
+    logText.hidden = false;
+  });
+}
+
 // 전자칠판 전용 네이티브 앱으로 열렸을 때도 "교실 바꾸기/공유"는 그대로
 // 쓸 수 있어야 한다(처음 설치한 기기에서 교실 코드를 고르는 것도 이 화면을
 // 통해서다 — js/room.js가 URL에 ?room=이 없으면 자동으로 띄워준다). 다만

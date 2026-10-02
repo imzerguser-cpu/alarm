@@ -259,6 +259,14 @@
                 </label>
                 <button id="saveAndroidLaunchTimeBtn">저장</button>
                 <p id="androidLaunchTimeMessage" class="admin-save-message"></p>
+
+                <!-- 이 기기가 전자칠판 설치 앱일 때만 보인다(main.js가
+                     window.AndroidLaunchTime.getDiagnosticsLog 존재 여부로 판단).
+                     "자동 실행이 왜 안 됐지?" 싶을 때 이 버튼을 눌러서 기록을
+                     보고, 그대로 캡처해서 보내주면 원인을 확인하기 쉽다. -->
+                <button id="showDiagnosticsLogBtn" hidden style="margin-top:10px;">진단 로그 보기</button>
+                <textarea id="diagnosticsLogText" readonly hidden
+                  style="width:100%; margin-top:8px; height:160px; background:#0e1420; color:#fff; border:1px solid #3a4864; border-radius:8px; padding:8px; font-size:0.78rem; white-space:pre-wrap;"></textarea>
               </div>
             </div>
           </div>
