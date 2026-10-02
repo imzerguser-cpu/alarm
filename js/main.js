@@ -84,7 +84,7 @@ let daily = {
 };
 let bellConfig = DEFAULT_BELL_CONFIG;
 let adminPin = '1234';
-let uiSettings = { studentAccordionDefaultOpen: false };
+let uiSettings = { studentAccordionDefaultOpen: false, launchHour: 8, launchMinute: 45 };
 // 학생별로 지금 아코디언이 펼쳐져 있는지 여부. studentManualOverride에 없는
 // 학생은 매번 다시 그릴 때마다 "1인1역/해야할일/제출할것 중 하나라도 적혀
 // 있으면 펼침"으로 다시 계산한다 — 그래야 방금 뭔가 적어 넣은 학생이 바로
@@ -715,33 +715,29 @@ document.getElementById('savePeriodsBtn').addEventListener('click', () => {
   msg.className = 'admin-save-message';
 });
 
-// ---- 전자칠판 전용 앱: 프로그램 자동 실행 시간 ----
-// window.AndroidLaunchTime은 네이티브 안드로이드 앱(WebView)이
-// addJavascriptInterface로 심어준 다리다. 일반 브라우저(PC/태블릿)에는 이
-// 객체 자체가 없으므로, 있을 때만 카드를 보여주고 값을 읽어온다. 이 값은
-// Firestore가 아니라 "이 기기 자체"에만 있는 설정(안드로이드
-// AlarmManager)이라, 여기서 읽고 쓰는 건 전부 이 다리를 통해서만 한다.
+// ---- 전자칠판 자동 실행 시간 ----
+// 이 값은 다른 설정과 똑같이 Firestore(settings/admin)에 저장되어 모든
+// 기기(PC·태블릿·전자칠판)에 동기화된다 — PC에서 바꿔도 전자칠판에 설치된
+// 앱이 그 값을 받아서 안드로이드 알람을 다시 맞춘다. window.AndroidLaunchTime
+// 다리는 "값을 보여주는 용도"가 아니라, 이 기기가 전자칠판 설치 앱일 때
+// 실제 안드로이드 알람을 거는 데만 쓰인다(uiSettings가 바뀔 때마다 호출).
 function renderAndroidLaunchTimeUI() {
-  const bridge = window.AndroidLaunchTime;
-  const card = document.getElementById('androidLaunchTimeCard');
-  if (!bridge) {
-    card.hidden = true;
-    return;
-  }
-  card.hidden = false;
-  const hour = String(bridge.getHour()).padStart(2, '0');
-  const minute = String(bridge.getMinute()).padStart(2, '0');
+  const hour = String(uiSettings.launchHour ?? 8).padStart(2, '0');
+  const minute = String(uiSettings.launchMinute ?? 45).padStart(2, '0');
   document.getElementById('androidLaunchTimeInput').value = `${hour}:${minute}`;
 }
 
 document.getElementById('saveAndroidLaunchTimeBtn').addEventListener('click', () => {
-  const bridge = window.AndroidLaunchTime;
   const value = document.getElementById('androidLaunchTimeInput').value;
-  if (!bridge || !value) return;
+  if (!value) return;
   const [hour, minute] = value.split(':').map(Number);
-  bridge.setTime(hour, minute);
+  uiSettings = { ...uiSettings, launchHour: hour, launchMinute: minute };
+  trackSave(saveUiSettings({ launchHour: hour, launchMinute: minute }));
+  if (window.AndroidLaunchTime) {
+    window.AndroidLaunchTime.setTime(hour, minute);
+  }
   const msg = document.getElementById('androidLaunchTimeMessage');
-  msg.textContent = '저장되었습니다.';
+  msg.textContent = '저장되었습니다. 전자칠판에 설치된 기기에도 곧 반영됩니다.';
   msg.className = 'admin-save-message';
 });
 
@@ -1102,10 +1098,20 @@ async function loadInitialData() {
     if (data && typeof data.studentAccordionDefaultOpen === 'boolean') {
       uiSettings = { ...uiSettings, studentAccordionDefaultOpen: data.studentAccordionDefaultOpen };
     }
+    if (data && typeof data.launchHour === 'number' && typeof data.launchMinute === 'number') {
+      uiSettings = { ...uiSettings, launchHour: data.launchHour, launchMinute: data.launchMinute };
+    }
   } catch (err) {
     handleLoadError(err);
   }
   updateStudentAccordionDefaultBtn();
+  renderAndroidLaunchTimeUI();
+  // 전자칠판이 꺼져 있는 동안 PC에서 자동 실행 시각을 바꿨을 수도 있으니,
+  // 이 기기가 설치 앱이면(다리가 있으면) 앱을 열 때마다 최신 값으로
+  // 안드로이드 알람을 다시 맞춰둔다.
+  if (window.AndroidLaunchTime && typeof uiSettings.launchHour === 'number') {
+    window.AndroidLaunchTime.setTime(uiSettings.launchHour, uiSettings.launchMinute);
+  }
 }
 
 // ---- 실시간 동기화 ----
@@ -1172,6 +1178,16 @@ function startLiveSync() {
     if (data.pin) adminPin = data.pin;
     if (typeof data.studentAccordionDefaultOpen === 'boolean') {
       uiSettings = { ...uiSettings, studentAccordionDefaultOpen: data.studentAccordionDefaultOpen };
+    }
+    if (typeof data.launchHour === 'number' && typeof data.launchMinute === 'number') {
+      uiSettings = { ...uiSettings, launchHour: data.launchHour, launchMinute: data.launchMinute };
+      renderAndroidLaunchTimeUI();
+      // 다른 기기(PC 등)에서 자동 실행 시각을 바꾸면 실시간으로 여기까지
+      // 전달된다 — 이 기기가 설치 앱이면 안드로이드 알람도 바로 그 시각에
+      // 맞춰 다시 건다.
+      if (window.AndroidLaunchTime) {
+        window.AndroidLaunchTime.setTime(data.launchHour, data.launchMinute);
+      }
     }
     updateStudentAccordionDefaultBtn();
   }, handleLoadError));

@@ -238,22 +238,28 @@
               </div>
             </div>
 
-            <!-- 전자칠판용 전용 앱(네이티브 안드로이드 앱)으로 열었을 때만 보인다
-                 (main.js가 window.AndroidLaunchTime 존재 여부로 판단). 이 값은
-                 이 기기에만 있는 설정(안드로이드 AlarmManager로 거는 부팅 알람)이라
-                 Firestore가 아니라 기기 자체에 저장되고, 그래서 PC/태블릿 등 다른
-                 기기나 일반 브라우저에는 의미가 없어서 평소엔 숨겨둔다. -->
-            <div id="androidLaunchTimeCard" class="schedule-card" hidden>
-              <h2>프로그램 자동 실행 시간 (이 전자칠판 전용)</h2>
-              <p class="tt-edit-hint">
-                이 전자칠판이 매일 아침 전원이 켜진 뒤, 이 시각에 알리미 화면이
-                자동으로 뜹니다. 다른 기기(태블릿/PC)에는 영향을 주지 않습니다.
-              </p>
-              <label>자동 실행 시각
-                <input id="androidLaunchTimeInput" type="time">
-              </label>
-              <button id="saveAndroidLaunchTimeBtn">저장</button>
-              <p id="androidLaunchTimeMessage" class="admin-save-message"></p>
+            <!-- 이 설정은 교실 전체(이 교실 코드를 쓰는 모든 기기)에 공유된다.
+                 PC/태블릿의 일반 브라우저에서도 보이고 바꿀 수 있지만, 실제로
+                 안드로이드 알람을 거는 효과는 전자칠판에 설치된 앱(교실알리미)
+                 에서만 일어난다 — js/main.js가 window.AndroidLaunchTime 다리가
+                 있을 때만 안드로이드 쪽에 값을 전달한다. -->
+            <div class="schedule-card">
+              <button type="button" class="card-toggle" data-card-toggle="androidLaunchTimeCardBody">
+                <h2>전자칠판 자동 실행 시간</h2>
+                <span class="card-toggle-chevron">▼</span>
+              </button>
+              <div id="androidLaunchTimeCardBody" class="card-body" hidden>
+                <p class="tt-edit-hint">
+                  이 교실 코드로 설치된 전자칠판 앱이 매일 이 시각에 자동으로 켜집니다.
+                  여기서 바꾸면 PC에서 바꾸든 전자칠판에서 바꾸든 같은 교실의 모든
+                  전자칠판에 그대로 반영됩니다.
+                </p>
+                <label>자동 실행 시각
+                  <input id="androidLaunchTimeInput" type="time">
+                </label>
+                <button id="saveAndroidLaunchTimeBtn">저장</button>
+                <p id="androidLaunchTimeMessage" class="admin-save-message"></p>
+              </div>
             </div>
           </div>
         </div>
