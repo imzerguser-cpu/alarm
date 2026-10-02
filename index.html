@@ -338,6 +338,15 @@
       </aside>
     </div>
 
+    <!-- 전자칠판의 "분할 화면"(다른 앱과 화면을 나눠 쓰는 모드)처럼 폭이 좁은
+         상태에서 쓰는 간단 보기. PC 플로팅 위젯(js/floating-widget.js)과
+         내용은 같지만, 그건 별도 창을 띄우는 기능(안드로이드 WebView는 지원
+         안 함)이라 이건 지금 이 화면 자체를 접어서 보여주는 방식이다. -->
+    <section id="compactView" class="compact-view" hidden>
+      <div id="compactNext" class="compact-next"></div>
+      <div id="compactSchedule" class="compact-schedule"></div>
+    </section>
+
   </div>
 
   <div class="toolbar">
@@ -362,6 +371,7 @@
 
     <button id="floatingWidgetBtn">🪟 PC 플로팅 위젯 열기</button>
     <div id="floatingWidgetMessage" class="install-message"></div>
+    <button id="splitViewToggleBtn">🗗 분할화면 모드</button>
   </div>
 
   <div id="pinModal" class="pin-modal" hidden>

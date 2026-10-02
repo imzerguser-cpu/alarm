@@ -129,6 +129,7 @@ function renderTimetableNow() {
   panel.classList.toggle('editable', window.__EDIT_MODE__);
   renderWeeklyGrid();
   updateCurrentPeriodInfo(rows);
+  renderCompactSchedule(rows);
 }
 
 // 지금 시각이 rows 중 어느 교시에 해당하는지 찾아 알리미 상단에 그대로 문장으로
@@ -1009,6 +1010,68 @@ wireFloatingWidgetButton({
       connLost: !document.getElementById('connStatus').hidden,
     };
   },
+});
+
+// ---- 분할화면 모드 ----
+// PC 플로팅 위젯(documentPictureInPicture)은 전자칠판의 WebView에서는 아예
+// 지원되지 않는 기능이라, 전자칠판에서 다른 앱과 화면을 나눠 쓸 때는 대신
+// 이 화면 자체를 "간단 보기"로 접는 방식을 쓴다 — 내용은 플로팅 위젯과
+// 똑같다(다음 알림 + 오늘 시간표).
+const SPLIT_VIEW_KEY = 'classBellSplitView';
+
+function renderCompactSchedule(rows) {
+  const container = document.getElementById('compactSchedule');
+  if (!container) return;
+  container.innerHTML = '';
+  for (const row of rows) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'compact-row' + (row.isCurrent ? ' current' : '');
+    const time = document.createElement('span');
+    time.className = 'compact-row-time';
+    time.textContent = row.time;
+    const subject = document.createElement('span');
+    subject.className = 'compact-row-subject';
+    subject.textContent = row.subject + (row.overridden ? ' (오늘만)' : '');
+    rowEl.append(time, subject);
+    container.appendChild(rowEl);
+  }
+}
+
+// 현재 교시/다음 알림 문구는 본 화면 상단(#currentPeriodInfo, #nextAlarmInfo)
+// 이 이미 매초 최신으로 유지하고 있으므로, 계산을 또 하지 않고 그 글자를
+// 그대로 복사해 보여준다.
+function syncCompactNext() {
+  const compactNext = document.getElementById('compactNext');
+  if (!compactNext) return;
+  const current = document.getElementById('currentPeriodInfo').textContent;
+  const next = document.getElementById('nextAlarmInfo').textContent;
+  compactNext.textContent = `${current}\n${next}`;
+}
+setInterval(syncCompactNext, 1000);
+syncCompactNext();
+
+function applySplitViewMode(enabled) {
+  document.body.classList.toggle('split-view', enabled);
+  const btn = document.getElementById('splitViewToggleBtn');
+  if (btn) btn.textContent = enabled ? '🗗 전체 화면으로' : '🗗 분할화면 모드';
+}
+
+let splitViewEnabled = false;
+try {
+  splitViewEnabled = localStorage.getItem(SPLIT_VIEW_KEY) === 'true';
+} catch (err) {
+  // localStorage를 못 쓰는 환경에서도 기본값(꺼짐)으로 계속 진행한다.
+}
+applySplitViewMode(splitViewEnabled);
+
+document.getElementById('splitViewToggleBtn').addEventListener('click', () => {
+  splitViewEnabled = !splitViewEnabled;
+  try {
+    localStorage.setItem(SPLIT_VIEW_KEY, String(splitViewEnabled));
+  } catch (err) {
+    // 저장이 안 되면 이번 화면을 쓰는 동안만 유지된다 — 치명적이지 않다.
+  }
+  applySplitViewMode(splitViewEnabled);
 });
 
 // ---- 초기 데이터 한 번 불러오기 ----

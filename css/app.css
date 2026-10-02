@@ -43,6 +43,34 @@
   .three-col-row { grid-template-columns: 1fr; }
 }
 
+/* "분할화면 모드" — 전자칠판에서 다른 앱과 화면을 나눠 쓸 때처럼 폭이 좁은
+   상태를 위한 간단 보기. 켜져 있으면 평소의 3칸(학생 명단/알리미/시간표)과
+   알림장을 숨기고, 맨 위 시계 아래에 "다음 알림"과 오늘 시간표만 간략하게
+   세로로 보여준다. 토글은 js/main.js가 body에 붙이는 split-view 클래스로
+   제어한다. */
+body.split-view .three-col-row,
+body.split-view .notice-section {
+  display: none;
+}
+.compact-view { display: none; padding: 0 20px; }
+body.split-view .compact-view { display: block; }
+.compact-next {
+  text-align: center; color: #ffcc00; font-size: 1.05rem; font-weight: bold;
+  padding: 14px; margin-bottom: 12px; background: #1a2233; border-radius: 14px; line-height: 1.4;
+  white-space: pre-line;
+}
+.compact-schedule {
+  display: flex; flex-direction: column; gap: 6px; max-height: 70vh; overflow-y: auto;
+}
+.compact-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 14px; border-radius: 10px; background: #1a2233; font-size: 0.95rem;
+}
+.compact-row.current { background: #ffcc00; color: #111; font-weight: bold; }
+.compact-row .compact-row-time { color: #9aa7bd; flex: none; white-space: nowrap; font-size: 0.85rem; }
+.compact-row.current .compact-row-time { color: #333; }
+.compact-row .compact-row-subject { flex: 1; text-align: right; }
+
 .center-section { display: flex; flex-direction: column; gap: 16px; }
 
 .student-section {
