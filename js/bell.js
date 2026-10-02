@@ -258,7 +258,14 @@
     schedule.forEach((item) => {
       if (item.time === hm && !fired.has(item.time)) {
         markFired(item.time);
-        speakRepeated(item.message, ALARM_REPEAT_COUNT);
+        // 전자칠판 설치 앱에서는 오늘의 알림을 안드로이드 쪽에도 따로
+        // 예약해뒀다(pushBellSchedule 참고) — 화면이 안 보이는 상태(다른
+        // 앱을 쓰는 중)에서도 안드로이드가 독립적으로 직접 말해준다. 이
+        // 페이지가 지금 보이고 있어서 여기서도 또 말하면 두 번 겹쳐 들리므로,
+        // 그 경우엔 배너/알림만 띄우고 음성은 안드로이드 쪽에 맡긴다.
+        if (!(window.AndroidTTS && typeof window.AndroidTTS.scheduleAlerts === 'function')) {
+          speakRepeated(item.message, ALARM_REPEAT_COUNT);
+        }
         notifyInBackground(item.message);
         showBanner(`${item.time} — ${item.message}`);
       }
@@ -285,6 +292,11 @@
     bellStatusEl.textContent = '알리미가 작동 중입니다.';
     bellStatusEl.classList.add('on');
     updateRunningBadge();
+    // 전자칠판 설치 앱이면, 꺼져 있는 동안 못 걸어뒀을 수 있는 오늘의 알림을
+    // 지금 다시 안드로이드 쪽에 예약해둔다.
+    if (window.AndroidTTS && typeof window.AndroidTTS.scheduleAlerts === 'function') {
+      try { window.AndroidTTS.scheduleAlerts(JSON.stringify(schedule)); } catch (err) { /* 무시 */ }
+    }
   }
 
   function stopBell() {
@@ -296,6 +308,11 @@
     bellStatusEl.textContent = '알리미가 꺼져 있습니다. 시작 버튼을 눌러주세요.';
     bellStatusEl.classList.remove('on');
     updateRunningBadge();
+    // 꺼졌는데 안드로이드 쪽에 예약해둔 알림이 그대로 남아있으면 꺼진 상태로도
+    // 음성이 울리게 되므로, 걸어둔 알람을 전부 취소한다.
+    if (window.AndroidTTS && typeof window.AndroidTTS.cancelAlerts === 'function') {
+      try { window.AndroidTTS.cancelAlerts(); } catch (err) { /* 무시 */ }
+    }
   }
 
   function renderSchedule() {
@@ -400,6 +417,18 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(schedule));
       renderSchedule();
       updateNextAlarmInfo();
+      // 전자칠판 설치 앱이면서 알리미가 켜져 있을 때만, 오늘 이 목록을
+      // 안드로이드 쪽에도 그대로 넘겨서(exact alarm으로 하나씩 예약) 이
+      // 화면이 안 보이는 상태(다른 앱을 쓰는 중)에서도 독립적으로 정확한
+      // 시각에 말해주게 한다. 꺼져 있을 때는 걸지 않는다(startBell이 켤 때
+      // 다시 걸어준다).
+      if (running && window.AndroidTTS && typeof window.AndroidTTS.scheduleAlerts === 'function') {
+        try {
+          window.AndroidTTS.scheduleAlerts(JSON.stringify(schedule));
+        } catch (err) {
+          console.error('안드로이드 쪽 알림 예약 실패:', err);
+        }
+      }
     },
   };
 })();
